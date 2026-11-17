@@ -23,6 +23,7 @@ import {
   Award,
   Users,
   Briefcase,
+  Camera,
 } from 'lucide-react-native';
 import { COLORS, SHADOWS } from '../../src/constants/theme';
 
@@ -31,6 +32,31 @@ export default function TeacherProfileScreen() {
   const [notifications, setNotifications] = useState(true);
   const [biometrics, setBiometrics] = useState(true);
   const [language, setLanguage] = useState<'en' | 'ta'>('en');
+
+  const handlePhotoUpload = () => {
+    Alert.alert(
+      'Faculty Profile Photo',
+      'Upload a verified passport-style portrait for Greenwood Faculty Directory and Parent In-Charge desk.',
+      [
+        {
+          text: 'Take Photo with Camera',
+          onPress: () => {
+            Alert.alert('Camera', 'Photo captured and saved to Greenwood Faculty Registry.');
+          },
+        },
+        {
+          text: 'Choose from Photo Library',
+          onPress: () => {
+            Alert.alert('Library', 'Photo updated in Greenwood Faculty Registry.');
+          },
+        },
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+      ]
+    );
+  };
 
   const handleLogout = () => {
     Alert.alert(
@@ -59,9 +85,19 @@ export default function TeacherProfileScreen() {
       >
         {/* FACULTY PROFILE CARD */}
         <View style={[styles.profileCard, SHADOWS.card]}>
-          <View style={styles.avatarCircle}>
-            <Text style={styles.avatarText}>DR</Text>
-          </View>
+          <TouchableOpacity
+            style={styles.avatarWrapper}
+            onPress={handlePhotoUpload}
+            activeOpacity={0.8}
+          >
+            <View style={styles.avatarCircle}>
+              <Text style={styles.avatarText}>DR</Text>
+            </View>
+            <View style={styles.cameraBadge}>
+              <Camera size={13} color="#FFFFFF" strokeWidth={2.4} />
+            </View>
+          </TouchableOpacity>
+
           <View style={{ flex: 1 }}>
             <View style={styles.nameRow}>
               <Text style={styles.facultyName}>Mrs. Deepa R.</Text>
@@ -75,6 +111,15 @@ export default function TeacherProfileScreen() {
             <Text style={styles.facultyMeta}>
               ID: FAC-2019-042 • deepa.r@greenwood.edu
             </Text>
+
+            <TouchableOpacity
+              style={styles.changePhotoBtn}
+              onPress={handlePhotoUpload}
+              activeOpacity={0.7}
+            >
+              <Camera size={12} color={COLORS.brand[600]} />
+              <Text style={styles.changePhotoBtnText}>Update Profile Photo</Text>
+            </TouchableOpacity>
           </View>
         </View>
 
@@ -287,6 +332,9 @@ const styles = StyleSheet.create({
     gap: 14,
     marginBottom: 20,
   },
+  avatarWrapper: {
+    position: 'relative',
+  },
   avatarCircle: {
     width: 52,
     height: 52,
@@ -295,10 +343,35 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  cameraBadge: {
+    position: 'absolute',
+    bottom: -2,
+    right: -2,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: COLORS.brand[700],
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: COLORS.white,
+  },
   avatarText: {
     color: COLORS.white,
     fontSize: 18,
     fontWeight: '800',
+  },
+  changePhotoBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: 6,
+    paddingVertical: 2,
+  },
+  changePhotoBtnText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: COLORS.brand[600],
   },
   nameRow: {
     flexDirection: 'row',

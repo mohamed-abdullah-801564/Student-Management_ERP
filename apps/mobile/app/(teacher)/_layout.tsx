@@ -87,6 +87,13 @@ export default function TeacherTabsLayout() {
           tabBarStyle: { display: 'none' },
         }}
       />
+      <Tabs.Screen
+        name="approvals"
+        options={{
+          tabBarItemStyle: { display: 'none' },
+          tabBarStyle: { display: 'none' },
+        }}
+      />
     </Tabs>
   );
 }

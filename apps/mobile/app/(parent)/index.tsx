@@ -6,6 +6,7 @@ import {
   ScrollView,
   TouchableOpacity,
   Modal,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useNavigation } from 'expo-router';
@@ -21,6 +22,10 @@ import {
   CheckSquare,
   Square,
   Paperclip,
+  CalendarCheck,
+  Users,
+  Clock,
+  CreditCard,
 } from 'lucide-react-native';
 import { COLORS, SHADOWS } from '../../src/constants/theme';
 import {
@@ -29,12 +34,65 @@ import {
   MOCK_REPORT_CARD,
   ParentHomeworkItem,
 } from '../../src/constants/mockData';
+import { AnimatedNumberTicker } from '../../src/components/AnimatedNumberTicker';
+
+const CLASS_8B_TEACHERS = [
+  {
+    id: 't1',
+    name: 'Mrs. Deepa R.',
+    subject: 'Mathematics',
+    designation: 'Senior Faculty • Class 8-B In-Charge',
+    initials: 'DR',
+    isClassTeacher: true,
+  },
+  {
+    id: 't2',
+    name: 'Mr. Anand Kumar',
+    subject: 'Physics & Science',
+    designation: 'HOD Science • 12 Yrs Exp',
+    initials: 'AK',
+    isClassTeacher: false,
+  },
+  {
+    id: 't3',
+    name: 'Mr. Venkatesh R.',
+    subject: 'Social Science & History',
+    designation: 'Secondary Faculty • 9 Yrs Exp',
+    initials: 'VR',
+    isClassTeacher: false,
+  },
+  {
+    id: 't4',
+    name: 'Mrs. Preetha V.',
+    subject: 'English Core & Lit.',
+    designation: 'Senior English Faculty',
+    initials: 'PV',
+    isClassTeacher: false,
+  },
+  {
+    id: 't5',
+    name: 'Dr. S. Raman',
+    subject: 'Second Language (Sanskrit/Tamil)',
+    designation: 'Department of Languages',
+    initials: 'SR',
+    isClassTeacher: false,
+  },
+  {
+    id: 't6',
+    name: 'Mr. Karthik Raja',
+    subject: 'Physical Education & Sports',
+    designation: 'Sports Director • Athletics In-Charge',
+    initials: 'KR',
+    isClassTeacher: false,
+  },
+];
 
 export default function ParentHomeScreen() {
   const router = useRouter();
   const navigation = useNavigation<any>();
   const [isDiaryModalVisible, setIsDiaryModalVisible] = useState(false);
   const [isHomeworkModalVisible, setIsHomeworkModalVisible] = useState(false);
+  const [isTeachersModalVisible, setIsTeachersModalVisible] = useState(false);
   const [homeworkList, setHomeworkList] = useState<ParentHomeworkItem[]>(MOCK_PARENT_HOMEWORK);
 
   const toggleHomework = (id: string) => {
@@ -97,7 +155,12 @@ export default function ParentHomeScreen() {
 
           <View style={styles.attendanceRight}>
             <View style={styles.overallPercentBadge}>
-              <Text style={styles.overallPercentText}>94.2%</Text>
+              <AnimatedNumberTicker
+                value={94.2}
+                decimalPlaces={1}
+                suffix="%"
+                style={styles.overallPercentText}
+              />
               <Text style={styles.overallPercentSub}>Overall</Text>
             </View>
             <TouchableOpacity
@@ -149,19 +212,25 @@ export default function ParentHomeScreen() {
           <View style={styles.heroStatsRow}>
             <View style={styles.heroStatItem}>
               <Text style={styles.heroStatLabel}>TOTAL SCORE</Text>
-              <Text style={styles.heroStatValue}>
-                {MOCK_REPORT_CARD.overallScore}
+              <View style={{ flexDirection: 'row', alignItems: 'baseline' }}>
+                <AnimatedNumberTicker
+                  value={MOCK_REPORT_CARD.overallScore}
+                  style={styles.heroStatValue}
+                />
                 <Text style={styles.heroStatDenom}>/{MOCK_REPORT_CARD.totalMarks}</Text>
-              </Text>
+              </View>
             </View>
 
             <View style={styles.heroStatDivider} />
 
             <View style={styles.heroStatItem}>
               <Text style={styles.heroStatLabel}>PERCENTAGE</Text>
-              <Text style={[styles.heroStatValue, { color: '#34D399' }]}>
-                {MOCK_REPORT_CARD.percentage}%
-              </Text>
+              <AnimatedNumberTicker
+                value={MOCK_REPORT_CARD.percentage}
+                decimalPlaces={1}
+                suffix="%"
+                style={[styles.heroStatValue, { color: '#34D399' }]}
+              />
             </View>
 
             <View style={styles.heroStatDivider} />
@@ -198,13 +267,27 @@ export default function ParentHomeScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* SECTION: QUICK ACTIONS (NO CARD WRAPPER - ONLY 4 CIRCULAR BUTTONS IN ONE ROW) */}
+        {/* SECTION: QUICK ACTIONS (2 BALANCED ROWS OF 4 CIRCULAR BUTTONS) */}
         <View style={styles.quickActionHeader}>
           <Text style={styles.sectionTitle}>Quick Actions</Text>
+          <Text style={styles.quickActionSubtitle}>Essential student & academic services</Text>
         </View>
 
+        {/* ROW 1: ACADEMIC & DAILY LOGS */}
         <View style={styles.circleButtonsRow}>
-          {/* Button 1: Class Diary */}
+          {/* Button 1: Attendance */}
+          <TouchableOpacity
+            style={styles.circleActionItem}
+            onPress={() => navigateTo('attendance', '/(parent)/attendance')}
+            activeOpacity={0.75}
+          >
+            <View style={[styles.circleButton, { backgroundColor: '#ECFDF5' }]}>
+              <CalendarCheck size={22} color={COLORS.present} strokeWidth={2.2} />
+            </View>
+            <Text style={styles.circleActionLabel}>Attendance</Text>
+          </TouchableOpacity>
+
+          {/* Button 2: Class Diary */}
           <TouchableOpacity
             style={styles.circleActionItem}
             onPress={() => setIsDiaryModalVisible(true)}
@@ -216,14 +299,14 @@ export default function ParentHomeScreen() {
             <Text style={styles.circleActionLabel}>Diary</Text>
           </TouchableOpacity>
 
-          {/* Button 2: Homework */}
+          {/* Button 3: Homework */}
           <TouchableOpacity
             style={styles.circleActionItem}
             onPress={() => setIsHomeworkModalVisible(true)}
             activeOpacity={0.75}
           >
-            <View style={[styles.circleButton, { backgroundColor: '#ECFDF5' }]}>
-              <ClipboardCheck size={22} color={COLORS.present} strokeWidth={2.2} />
+            <View style={[styles.circleButton, { backgroundColor: '#EFF6FF' }]}>
+              <ClipboardCheck size={22} color="#2563EB" strokeWidth={2.2} />
               {homeworkList.filter((h) => !h.isCompleted).length > 0 && (
                 <View style={styles.circleBadge}>
                   <Text style={styles.circleBadgeText}>
@@ -235,7 +318,7 @@ export default function ParentHomeScreen() {
             <Text style={styles.circleActionLabel}>Homework</Text>
           </TouchableOpacity>
 
-          {/* Button 3: Report Card */}
+          {/* Button 4: Report Card */}
           <TouchableOpacity
             style={styles.circleActionItem}
             onPress={() => navigateTo('marks', '/(parent)/marks')}
@@ -246,17 +329,62 @@ export default function ParentHomeScreen() {
             </View>
             <Text style={styles.circleActionLabel}>Report Card</Text>
           </TouchableOpacity>
+        </View>
 
-          {/* Button 4: Class In-Charge Chat */}
+        {/* ROW 2: FACULTY & TIMETABLE */}
+        <View style={[styles.circleButtonsRow, { marginTop: 16 }]}>
+          {/* Button 5: Subject Teachers */}
+          <TouchableOpacity
+            style={styles.circleActionItem}
+            onPress={() => setIsTeachersModalVisible(true)}
+            activeOpacity={0.75}
+          >
+            <View style={[styles.circleButton, { backgroundColor: '#F0F9FF' }]}>
+              <Users size={22} color="#0284C7" strokeWidth={2.2} />
+            </View>
+            <Text style={styles.circleActionLabel}>Teachers</Text>
+          </TouchableOpacity>
+
+          {/* Button 6: Class In-Charge Chat */}
           <TouchableOpacity
             style={styles.circleActionItem}
             onPress={() => navigateTo('chat', '/(parent)/chat')}
             activeOpacity={0.75}
           >
-            <View style={[styles.circleButton, { backgroundColor: '#EFF6FF' }]}>
-              <MessageSquare size={22} color="#2563EB" strokeWidth={2.2} />
+            <View style={[styles.circleButton, { backgroundColor: '#FEF3C7' }]}>
+              <MessageSquare size={22} color="#D97706" strokeWidth={2.2} />
             </View>
             <Text style={styles.circleActionLabel}>In-Charge</Text>
+          </TouchableOpacity>
+
+          {/* Button 7: Timetable */}
+          <TouchableOpacity
+            style={styles.circleActionItem}
+            onPress={() => setIsDiaryModalVisible(true)}
+            activeOpacity={0.75}
+          >
+            <View style={[styles.circleButton, { backgroundColor: '#F3E8FF' }]}>
+              <Clock size={22} color="#7E22CE" strokeWidth={2.2} />
+            </View>
+            <Text style={styles.circleActionLabel}>Timetable</Text>
+          </TouchableOpacity>
+
+          {/* Button 8: Fee Desk */}
+          <TouchableOpacity
+            style={styles.circleActionItem}
+            onPress={() => {
+              Alert.alert(
+                'Fee Accounts Desk',
+                'Term 1 Academic Tuition Fees (₹28,500) fully cleared.\nReceipt #REC-2026-0891 digitally verified.',
+                [{ text: 'OK' }]
+              );
+            }}
+            activeOpacity={0.75}
+          >
+            <View style={[styles.circleButton, { backgroundColor: '#F0FDFA' }]}>
+              <CreditCard size={22} color="#0D9488" strokeWidth={2.2} />
+            </View>
+            <Text style={styles.circleActionLabel}>Fee Desk</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
@@ -375,6 +503,65 @@ export default function ParentHomeScreen() {
           </View>
         </View>
       </Modal>
+
+      {/* SUBJECT FACULTY MODAL (Class 8-B Teachers) */}
+      <Modal
+        visible={isTeachersModalVisible}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setIsTeachersModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalSheet, SHADOWS.soft]}>
+            <View style={styles.modalHeader}>
+              <View>
+                <Text style={styles.modalTitle}>Class 8-B Subject Faculty</Text>
+                <Text style={styles.modalSubtitle}>Faculty members assigned to Rahul Suresh</Text>
+              </View>
+              <TouchableOpacity
+                onPress={() => setIsTeachersModalVisible(false)}
+                style={styles.modalCloseBtn}
+              >
+                <X size={20} color={COLORS.slate[600]} />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView style={{ maxHeight: 420 }} showsVerticalScrollIndicator={false}>
+              {CLASS_8B_TEACHERS.map((teacher) => (
+                <View key={teacher.id} style={[styles.teacherItemCard, SHADOWS.card]}>
+                  <View style={styles.teacherAvatarCircle}>
+                    <Text style={styles.teacherAvatarText}>{teacher.initials}</Text>
+                  </View>
+
+                  <View style={{ flex: 1 }}>
+                    <View style={styles.teacherNameRow}>
+                      <Text style={styles.teacherName}>{teacher.name}</Text>
+                      {teacher.isClassTeacher && (
+                        <View style={styles.classTeacherBadge}>
+                          <Text style={styles.classTeacherBadgeText}>Class Teacher</Text>
+                        </View>
+                      )}
+                    </View>
+                    <Text style={styles.teacherSubject}>{teacher.subject}</Text>
+                    <Text style={styles.teacherExperience}>{teacher.designation}</Text>
+                  </View>
+
+                  <TouchableOpacity
+                    style={styles.teacherChatBtn}
+                    onPress={() => {
+                      setIsTeachersModalVisible(false);
+                      navigateTo('chat', '/(parent)/chat');
+                    }}
+                    activeOpacity={0.7}
+                  >
+                    <MessageSquare size={16} color={COLORS.brand[600]} />
+                  </TouchableOpacity>
+                </View>
+              ))}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -474,12 +661,12 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   attendanceTitle: {
-    fontSize: 14,
-    fontWeight: '700',
+    fontSize: 15,
+    fontWeight: '800',
     color: COLORS.presentText,
   },
   attendanceTimestamp: {
-    fontSize: 11,
+    fontSize: 12,
     color: COLORS.slate[500],
     marginTop: 2,
   },
@@ -666,6 +853,12 @@ const styles = StyleSheet.create({
     color: COLORS.slate[900],
     letterSpacing: -0.2,
   },
+  quickActionSubtitle: {
+    fontSize: 11,
+    color: COLORS.slate[500],
+    marginTop: 2,
+    fontWeight: '500',
+  },
   circleButtonsRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -692,10 +885,11 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   circleActionLabel: {
-    fontSize: 11,
+    fontSize: 13,
     fontWeight: '700',
     color: COLORS.slate[700],
     textAlign: 'center',
+    lineHeight: 16,
   },
   circleBadge: {
     position: 'absolute',
@@ -795,16 +989,17 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   topicLabel: {
-    fontSize: 9,
+    fontSize: 10,
     fontWeight: '800',
-    color: COLORS.slate[400],
+    color: COLORS.slate[500],
     letterSpacing: 0.5,
-    marginBottom: 2,
+    marginBottom: 3,
   },
   topicContentText: {
-    fontSize: 11,
-    color: COLORS.slate[700],
-    lineHeight: 15,
+    fontSize: 13,
+    color: COLORS.slate[800],
+    lineHeight: 18,
+    fontWeight: '500',
   },
 
   // Homework inside modal
@@ -873,5 +1068,74 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: '600',
     color: COLORS.brand[700],
+  },
+
+  // Faculty Items inside modal
+  teacherItemCard: {
+    backgroundColor: COLORS.white,
+    borderRadius: 14,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: COLORS.slate[200],
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginBottom: 10,
+  },
+  teacherAvatarCircle: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: COLORS.brand[50],
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: COLORS.brand[200],
+  },
+  teacherAvatarText: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: COLORS.brand[700],
+  },
+  teacherNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    flexWrap: 'wrap',
+  },
+  teacherName: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: COLORS.slate[900],
+  },
+  classTeacherBadge: {
+    backgroundColor: COLORS.presentBg,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  classTeacherBadgeText: {
+    fontSize: 9,
+    fontWeight: '800',
+    color: COLORS.presentText,
+  },
+  teacherSubject: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: COLORS.brand[600],
+    marginTop: 1,
+  },
+  teacherExperience: {
+    fontSize: 10,
+    color: COLORS.slate[500],
+    marginTop: 1,
+  },
+  teacherChatBtn: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: COLORS.brand[50],
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });

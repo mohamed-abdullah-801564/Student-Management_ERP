@@ -1,8 +1,8 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import {
   Shield,
   LayoutDashboard,
@@ -15,10 +15,17 @@ import {
   LogOut,
   ChevronRight,
   Sparkles,
+  Loader2,
 } from 'lucide-react';
 
 export default function Sidebar() {
   const pathname = usePathname();
+  const router = useRouter();
+  const [navigatingHref, setNavigatingHref] = useState<string | null>(null);
+
+  useEffect(() => {
+    setNavigatingHref(null);
+  }, [pathname]);
 
   const navItems = [
     {
@@ -88,24 +95,35 @@ export default function Sidebar() {
 
           {navItems.map((item) => {
             const Icon = item.icon;
-            const isActive = pathname === item.href;
+            const isCurrent = pathname === item.href;
+            const isNavigatingToThis = navigatingHref === item.href;
+            const isActive = isCurrent || isNavigatingToThis;
 
             return (
               <Link
                 key={item.href}
                 href={item.href}
-                className={`flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all ${
+                onClick={() => {
+                  if (pathname !== item.href) {
+                    setNavigatingHref(item.href);
+                  }
+                }}
+                className={`flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all relative ${
                   isActive
                     ? 'bg-indigo-50 text-indigo-700 font-bold shadow-xs'
                     : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
                 }`}
               >
                 <div className="flex items-center gap-3">
-                  <Icon
-                    className={`w-4 h-4 ${
-                      isActive ? 'text-indigo-600' : 'text-slate-400'
-                    }`}
-                  />
+                  {isNavigatingToThis && !isCurrent ? (
+                    <Loader2 className="w-4 h-4 text-indigo-600 animate-spin" />
+                  ) : (
+                    <Icon
+                      className={`w-4 h-4 ${
+                        isActive ? 'text-indigo-600' : 'text-slate-400'
+                      }`}
+                    />
+                  )}
                   <span>{item.name}</span>
                 </div>
 
@@ -148,7 +166,7 @@ export default function Sidebar() {
             <span>Settings</span>
           </button>
           <button
-            onClick={() => alert('Signing out executive session...')}
+            onClick={() => router.push('/login')}
             className="flex items-center gap-1.5 text-[11px] font-semibold text-rose-600 hover:text-rose-700 py-1 px-2 rounded-lg hover:bg-rose-50 transition-colors"
           >
             <LogOut className="w-3.5 h-3.5 text-rose-500" />

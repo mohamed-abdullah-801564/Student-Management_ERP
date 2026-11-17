@@ -35,11 +35,19 @@ export default function LoginScreen() {
     setIsLoading(true);
 
     // Auto-detect role:
-    // Teachers/Staff use faculty email or staff phone (e.g., contains 'teacher', 'deepa', or 'fac')
+    // Teachers/Staff use faculty email or staff phone (e.g., contains 'teacher', 'deepa', 'raman', 'coordinator', or 'fac')
     const lower = identifier.toLowerCase();
     setTimeout(() => {
       setIsLoading(false);
-      if (lower.includes('teacher') || lower.includes('faculty') || lower.includes('deepa') || lower === 'fac') {
+      if (
+        lower.includes('teacher') ||
+        lower.includes('faculty') ||
+        lower.includes('deepa') ||
+        lower.includes('coordinator') ||
+        lower.includes('raman') ||
+        lower.includes('staff') ||
+        lower === 'fac'
+      ) {
         router.replace('/(teacher)');
       } else {
         // Default to Parent Portal
@@ -145,6 +153,23 @@ export default function LoginScreen() {
               </Text>
               <ArrowRight size={18} color="#FFFFFF" />
             </TouchableOpacity>
+
+            {/* Instant 1-Tap Role Switcher for Testing */}
+            <View style={styles.quickRoleRow}>
+              <TouchableOpacity
+                onPress={() => router.replace('/(teacher)')}
+                style={styles.quickRoleBtn}
+              >
+                <Text style={styles.quickRoleBtnText}>👨‍🏫 Teacher / Coordinator</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={() => router.replace('/(parent)')}
+                style={styles.quickRoleBtn}
+              >
+                <Text style={styles.quickRoleBtnText}>👨‍👩‍👧 Parent Portal</Text>
+              </TouchableOpacity>
+            </View>
           </View>
 
           {/* Quick Demo Hint for Testing */}
@@ -282,6 +307,29 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '700',
     color: COLORS.white,
+  },
+
+  quickRoleRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 14,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.slate[100],
+  },
+  quickRoleBtn: {
+    flex: 1,
+    backgroundColor: COLORS.slate[50],
+    paddingVertical: 10,
+    borderRadius: 10,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: COLORS.slate[200],
+  },
+  quickRoleBtnText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: COLORS.slate[700],
   },
 
   hintContainer: {

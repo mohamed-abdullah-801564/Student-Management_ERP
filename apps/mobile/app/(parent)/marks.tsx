@@ -21,6 +21,7 @@ import {
 } from 'lucide-react-native';
 import { COLORS, SHADOWS } from '../../src/constants/theme';
 import { MOCK_REPORT_CARD } from '../../src/constants/mockData';
+import { AnimatedNumberTicker } from '../../src/components/AnimatedNumberTicker';
 
 export default function ParentMarksScreen() {
   const router = useRouter();
@@ -123,17 +124,23 @@ export default function ParentMarksScreen() {
           <View style={styles.heroMetricsGrid}>
             <View style={styles.metricItem}>
               <Text style={styles.metricLabel}>SCORE</Text>
-              <Text style={styles.metricValue}>
-                {MOCK_REPORT_CARD.overallScore}
+              <View style={{ flexDirection: 'row', alignItems: 'baseline' }}>
+                <AnimatedNumberTicker
+                  value={MOCK_REPORT_CARD.overallScore}
+                  style={styles.metricValue}
+                />
                 <Text style={styles.metricTotal}>/{MOCK_REPORT_CARD.totalMarks}</Text>
-              </Text>
+              </View>
             </View>
             <View style={styles.metricDivider} />
             <View style={styles.metricItem}>
               <Text style={styles.metricLabel}>PERCENTAGE</Text>
-              <Text style={[styles.metricValue, { color: '#10B981' }]}>
-                {MOCK_REPORT_CARD.percentage}%
-              </Text>
+              <AnimatedNumberTicker
+                value={MOCK_REPORT_CARD.percentage}
+                decimalPlaces={1}
+                suffix="%"
+                style={[styles.metricValue, { color: '#10B981' }]}
+              />
             </View>
             <View style={styles.metricDivider} />
             <View style={styles.metricItem}>
@@ -183,10 +190,13 @@ export default function ParentMarksScreen() {
                     <Text style={styles.subjectRemarks}>{subject.remarks}</Text>
                   </View>
                   <View style={styles.scoreWrap}>
-                    <Text style={styles.subjectScore}>
-                      {subject.marksObtained}
+                    <View style={{ flexDirection: 'row', alignItems: 'baseline' }}>
+                      <AnimatedNumberTicker
+                        value={subject.marksObtained}
+                        style={styles.subjectScore}
+                      />
                       <Text style={styles.subjectMax}>/{subject.maxMarks}</Text>
-                    </Text>
+                    </View>
                     <View style={styles.gradeBadge}>
                       <Text style={styles.gradeBadgeText}>{subject.grade}</Text>
                     </View>
@@ -217,7 +227,11 @@ export default function ParentMarksScreen() {
                   <Text style={styles.highestScoreText}>
                     Class Highest: {subject.highestInClass}/100
                   </Text>
-                  <Text style={styles.statusPercentText}>{percentage}% Marks</Text>
+                  <AnimatedNumberTicker
+                    value={percentage}
+                    suffix="% Marks"
+                    style={styles.statusPercentText}
+                  />
                 </View>
               </View>
             );

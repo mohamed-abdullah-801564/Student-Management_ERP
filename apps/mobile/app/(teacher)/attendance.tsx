@@ -120,7 +120,6 @@ export default function RapidAttendanceScreen() {
             onPress={() => setSession('morning')}
             activeOpacity={0.8}
           >
-            <Text style={styles.sessionIcon}>☀️</Text>
             <Text
               style={[
                 styles.sessionTabText,
@@ -140,7 +139,6 @@ export default function RapidAttendanceScreen() {
             onPress={() => setSession('afternoon')}
             activeOpacity={0.8}
           >
-            <Text style={styles.sessionIcon}>🌤️</Text>
             <Text
               style={[
                 styles.sessionTabText,

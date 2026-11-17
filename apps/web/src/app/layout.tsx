@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import './globals.css';
+import NavigationProgressBar from '@/components/NavigationProgressBar';
 
 export const metadata: Metadata = {
   title: 'Greenwood Academy | Executive Principal Suite',
@@ -22,6 +23,7 @@ export default function RootLayout({
         />
       </head>
       <body className="bg-slate-50 text-slate-900 antialiased min-h-screen">
+        <NavigationProgressBar />
         {children}
       </body>
     </html>
