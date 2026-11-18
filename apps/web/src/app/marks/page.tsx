@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Sidebar from '@/components/Sidebar';
 import Header from '@/components/Header';
@@ -20,6 +20,9 @@ import {
   BookOpen,
   GraduationCap,
   ArrowUpRight,
+  Plus,
+  RefreshCw,
+  X,
 } from 'lucide-react';
 
 interface TopperStudent {
@@ -249,6 +252,91 @@ export default function AcademicMarksPage() {
   const [selectedClass, setSelectedClass] = useState<'10' | '12' | '9' | '11'>('10');
   const [selectedTerm, setSelectedTerm] = useState('Term 1 Assessment');
 
+  // Supabase Marks State
+  const [realMarks, setRealMarks] = useState<any[]>([]);
+  const [dbStudents, setDbStudents] = useState<any[]>([]);
+  const [dbAssessments, setDbAssessments] = useState<any[]>([]);
+  const [loadingMarks, setLoadingMarks] = useState(true);
+
+  // New Mark Modal State
+  const [isRecordModalOpen, setIsRecordModalOpen] = useState(false);
+  const [selectedStudentId, setSelectedStudentId] = useState('');
+  const [selectedAssessmentId, setSelectedAssessmentId] = useState('');
+  const [subjectName, setSubjectName] = useState('Mathematics');
+  const [marksValue, setMarksValue] = useState('95');
+  const [teacherRemarks, setTeacherRemarks] = useState('');
+  const [isSavingMark, setIsSavingMark] = useState(false);
+
+  const fetchDbMarks = async () => {
+    try {
+      setLoadingMarks(true);
+      const res = await fetch('/api/marks');
+      const data = await res.json();
+      if (data.marks) {
+        setRealMarks(data.marks);
+      }
+      if (data.students) {
+        setDbStudents(data.students);
+        if (data.students.length > 0 && !selectedStudentId) {
+          setSelectedStudentId(data.students[0].id);
+        }
+      }
+      if (data.assessments) {
+        setDbAssessments(data.assessments);
+        if (data.assessments.length > 0 && !selectedAssessmentId) {
+          setSelectedAssessmentId(data.assessments[0].id);
+        }
+      }
+    } catch (err) {
+      console.error('Failed to load marks from Supabase:', err);
+    } finally {
+      setLoadingMarks(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchDbMarks();
+  }, []);
+
+  const handleSaveMark = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedStudentId || !selectedAssessmentId || !subjectName || !marksValue) {
+      alert('Please fill out all required fields.');
+      return;
+    }
+
+    setIsSavingMark(true);
+    try {
+      const res = await fetch('/api/marks', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          assessment_id: selectedAssessmentId,
+          student_id: selectedStudentId,
+          subject: subjectName,
+          marks_obtained: Number(marksValue),
+          max_marks: 100,
+          teacher_remarks: teacherRemarks || 'Recorded via Academic Executive Desk.',
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok || data.error) {
+        alert(`Error saving mark: ${data.error || 'Server error'}`);
+        return;
+      }
+
+      setIsRecordModalOpen(false);
+      setTeacherRemarks('');
+      alert('Student mark successfully recorded and saved to Supabase!');
+      fetchDbMarks();
+    } catch (err: any) {
+      alert(`Network error saving mark: ${err.message}`);
+    } finally {
+      setIsSavingMark(false);
+    }
+  };
+
   const currentToppers = TOPPERS_DATA[selectedClass] || TOPPERS_DATA['10'];
 
   return (
@@ -274,7 +362,7 @@ export default function AcademicMarksPage() {
               </p>
             </div>
 
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2.5">
               <select
                 value={selectedTerm}
                 onChange={(e) => setSelectedTerm(e.target.value)}
@@ -286,11 +374,19 @@ export default function AcademicMarksPage() {
               </select>
 
               <button
+                onClick={() => setIsRecordModalOpen(true)}
+                className="flex items-center gap-1.5 px-3.5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold shadow-xs transition-colors"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>+ Record Marks</span>
+              </button>
+
+              <button
                 onClick={() => alert('Official CBSE Board Marksheet Master Register downloaded with Principal digital seal.')}
-                className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-700 hover:bg-slate-50 shadow-xs"
+                className="flex items-center gap-2 px-3.5 py-2 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-700 hover:bg-slate-50 shadow-xs"
               >
                 <Download className="w-3.5 h-3.5 text-indigo-600" />
-                <span>Export Report</span>
+                <span className="hidden sm:inline">Export Report</span>
               </button>
             </div>
           </div>
@@ -506,8 +602,235 @@ export default function AcademicMarksPage() {
               ))}
             </div>
           </div>
+          {/* LIVE SUPABASE EXAMINATION MARKS REGISTER */}
+          <div className="bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden">
+            <div className="p-4 border-b border-slate-100 flex items-center justify-between">
+              <div>
+                <h3 className="text-sm font-extrabold text-slate-900">
+                  Supabase Verified Marksheets Roster
+                </h3>
+                <p className="text-xs text-slate-500">
+                  Real-time database entries synchronized with student academic profiles
+                </p>
+              </div>
+              <button
+                onClick={fetchDbMarks}
+                disabled={loadingMarks}
+                className="p-1.5 rounded-lg border border-slate-200 hover:bg-slate-50 text-slate-600 transition-colors"
+                title="Refresh from Supabase"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${loadingMarks ? 'animate-spin text-indigo-600' : ''}`} />
+              </button>
+            </div>
+
+            <div className="overflow-x-auto">
+              {loadingMarks ? (
+                <div className="py-8 text-center text-xs text-slate-400 flex items-center justify-center gap-2">
+                  <RefreshCw className="w-4 h-4 animate-spin text-indigo-600" />
+                  <span>Loading marks from Supabase...</span>
+                </div>
+              ) : realMarks.length === 0 ? (
+                <div className="py-8 text-center text-xs text-slate-400">
+                  No marks recorded in Supabase yet. Click <strong>+ Record Marks</strong> to add one.
+                </div>
+              ) : (
+                <table className="w-full text-left text-xs">
+                  <thead className="bg-slate-50 text-[10px] font-bold uppercase tracking-wider text-slate-500 border-b border-slate-200">
+                    <tr>
+                      <th className="py-3 px-4">Student</th>
+                      <th className="py-3 px-4">Subject</th>
+                      <th className="py-3 px-4 text-center">Score</th>
+                      <th className="py-3 px-4 text-center">Grade</th>
+                      <th className="py-3 px-4 text-center">Class Highest</th>
+                      <th className="py-3 px-4">Teacher Remark / Feedback</th>
+                      <th className="py-3 px-4 text-right">Term</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
+                    {realMarks.map((m) => (
+                      <tr key={m.id} className="hover:bg-slate-50/70 transition-colors">
+                        <td className="py-3 px-4">
+                          <span className="font-extrabold text-slate-900">
+                            {m.students?.first_name} {m.students?.last_name}
+                          </span>
+                          <span className="block text-[10px] font-mono text-slate-400">
+                            Roll #{m.students?.roll_no} • {m.students?.admission_no}
+                          </span>
+                        </td>
+                        <td className="py-3 px-4">
+                          <span className="font-semibold text-slate-800">{m.subject}</span>
+                        </td>
+                        <td className="py-3 px-4 text-center">
+                          <span className="font-extrabold text-slate-900">
+                            {m.marks_obtained}
+                          </span>
+                          <span className="text-slate-400 text-[10px]">/{m.max_marks}</span>
+                        </td>
+                        <td className="py-3 px-4 text-center">
+                          <span
+                            className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold ${
+                              m.grade === 'A1'
+                                ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                                : m.grade === 'A2'
+                                ? 'bg-blue-50 text-blue-700 border border-blue-200'
+                                : 'bg-slate-100 text-slate-700'
+                            }`}
+                          >
+                            {m.grade}
+                          </span>
+                        </td>
+                        <td className="py-3 px-4 text-center">
+                          <span className="font-semibold text-indigo-700">
+                            {m.highest_in_class}/100
+                          </span>
+                        </td>
+                        <td className="py-3 px-4 text-slate-600 italic text-[11px]">
+                          {m.teacher_remarks || '—'}
+                        </td>
+                        <td className="py-3 px-4 text-right font-mono text-[10px] text-slate-400">
+                          {m.academic_assessments?.term || 'Term 1'}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
+          </div>
         </main>
       </div>
+
+      {/* RECORD NEW MARKS MODAL */}
+      {isRecordModalOpen && (
+        <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-md w-full border border-slate-200 shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+            <div className="p-5 border-b border-slate-100 flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center">
+                  <Award className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-slate-900">
+                    Record Examination Marks
+                  </h3>
+                  <p className="text-[11px] text-slate-500">
+                    Saves directly to Supabase student_marks table
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setIsRecordModalOpen(false)}
+                className="w-7 h-7 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 flex items-center justify-center"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveMark} className="p-5 space-y-4 text-xs">
+              <div>
+                <label className="block font-bold text-slate-700 uppercase tracking-wider mb-1 text-[10px]">
+                  Examination Assessment *
+                </label>
+                <select
+                  value={selectedAssessmentId}
+                  onChange={(e) => setSelectedAssessmentId(e.target.value)}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-900 font-semibold focus:bg-white focus:ring-2 focus:ring-indigo-500"
+                >
+                  {dbAssessments.map((a) => (
+                    <option key={a.id} value={a.id}>
+                      {a.exam_name} ({a.term})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 uppercase tracking-wider mb-1 text-[10px]">
+                  Student *
+                </label>
+                <select
+                  value={selectedStudentId}
+                  onChange={(e) => setSelectedStudentId(e.target.value)}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-900 font-semibold focus:bg-white focus:ring-2 focus:ring-indigo-500"
+                >
+                  {dbStudents.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      Roll #{s.roll_no} — {s.first_name} {s.last_name} ({s.admission_no})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-bold text-slate-700 uppercase tracking-wider mb-1 text-[10px]">
+                    Subject *
+                  </label>
+                  <select
+                    value={subjectName}
+                    onChange={(e) => setSubjectName(e.target.value)}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-900 font-semibold focus:bg-white focus:ring-2 focus:ring-indigo-500"
+                  >
+                    <option value="Mathematics">Mathematics</option>
+                    <option value="Physics">Physics</option>
+                    <option value="Chemistry">Chemistry</option>
+                    <option value="Biology">Biology</option>
+                    <option value="Computer Science">Computer Science</option>
+                    <option value="English Core">English Core</option>
+                    <option value="Social Science">Social Science</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block font-bold text-slate-700 uppercase tracking-wider mb-1 text-[10px]">
+                    Marks Obtained (Max 100) *
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    max="100"
+                    required
+                    value={marksValue}
+                    onChange={(e) => setMarksValue(e.target.value)}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-900 font-bold focus:bg-white focus:ring-2 focus:ring-indigo-500"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 uppercase tracking-wider mb-1 text-[10px]">
+                  Teacher Feedback / Remarks
+                </label>
+                <input
+                  type="text"
+                  value={teacherRemarks}
+                  onChange={(e) => setTeacherRemarks(e.target.value)}
+                  placeholder="e.g. Excellent clarity in derivation and numericals."
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-900 focus:bg-white focus:ring-2 focus:ring-indigo-500"
+                />
+              </div>
+
+              <div className="pt-3 border-t border-slate-100 flex items-center justify-end gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => setIsRecordModalOpen(false)}
+                  className="px-4 py-2 rounded-xl border border-slate-200 text-slate-600 font-semibold hover:bg-slate-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSavingMark}
+                  className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold shadow-xs disabled:opacity-60 flex items-center gap-1.5"
+                >
+                  {isSavingMark && <RefreshCw className="w-3.5 h-3.5 animate-spin" />}
+                  <span>{isSavingMark ? 'Saving to Supabase...' : 'Save Marks'}</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

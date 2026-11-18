@@ -19,6 +19,7 @@ import {
   CheckCircle2,
   Zap,
   Send,
+  X,
 } from 'lucide-react-native';
 import { COLORS, SHADOWS } from '../../src/constants/theme';
 
@@ -27,6 +28,7 @@ export default function SubstituteAllocationScreen() {
   const navigation = useNavigation<any>();
   const [activeTab, setActiveTab] = useState<'teaching' | 'duties'>('duties');
   const [selectedTeacher, setSelectedTeacher] = useState<string>('karthik');
+  const [showConfirmSheet, setShowConfirmSheet] = useState(false);
   const [isAssigned, setIsAssigned] = useState(false);
 
   const handleBack = () => {
@@ -43,8 +45,9 @@ export default function SubstituteAllocationScreen() {
 
   const handleConfirm = () => {
     setIsAssigned(true);
+    setShowConfirmSheet(false);
     Alert.alert(
-      'Substitute Assigned! ⚡',
+      'Substitute Assigned!',
       'Mr. Karthik Raja has been notified via instant push alert. Grade 9-B timetable updated.',
       [{ text: 'OK' }]
     );
@@ -81,48 +84,6 @@ export default function SubstituteAllocationScreen() {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* Segmented Role Navigation */}
-        <View style={styles.navControl}>
-          <TouchableOpacity
-            style={[
-              styles.navTab,
-              activeTab === 'teaching' && styles.navTabActive,
-            ]}
-            onPress={() => setActiveTab('teaching')}
-            activeOpacity={0.8}
-          >
-            <Text
-              style={[
-                styles.navTabText,
-                activeTab === 'teaching' && styles.navTabTextActive,
-              ]}
-            >
-              My Teaching (3)
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[
-              styles.navTab,
-              activeTab === 'duties' && styles.navTabActive,
-            ]}
-            onPress={() => setActiveTab('duties')}
-            activeOpacity={0.8}
-          >
-            <Text
-              style={[
-                styles.navTabText,
-                activeTab === 'duties' && styles.navTabTextActive,
-              ]}
-            >
-              Coordinator Duties
-            </Text>
-            <View style={styles.activePill}>
-              <Text style={styles.activePillText}>Active</Text>
-            </View>
-          </TouchableOpacity>
-        </View>
-
         {/* Alert Hero Banner: Unplanned Absences */}
         <View style={styles.urgentBanner}>
           <View style={styles.urgentHeaderRow}>
@@ -251,7 +212,7 @@ export default function SubstituteAllocationScreen() {
 
               <TouchableOpacity
                 style={styles.assignButton}
-                onPress={handleConfirm}
+                onPress={() => setShowConfirmSheet(true)}
                 activeOpacity={0.85}
               >
                 <Text style={styles.assignButtonText}>
@@ -276,7 +237,7 @@ export default function SubstituteAllocationScreen() {
                 style={styles.secondaryAssignButton}
                 onPress={() => {
                   setSelectedTeacher('shalini');
-                  Alert.alert('Selected', 'Assigned Mrs. Shalini Raman.');
+                  setShowConfirmSheet(true);
                 }}
                 activeOpacity={0.8}
               >
@@ -367,49 +328,59 @@ export default function SubstituteAllocationScreen() {
         </View>
       </ScrollView>
 
-      {/* Confirmation Bottom Sheet */}
-      <View style={[styles.bottomSheet, SHADOWS.nav]}>
-        <View style={styles.sheetHandle} />
-        <View style={styles.sheetTopRow}>
-          <View>
-            <View style={styles.dispatchStatusRow}>
-              <View style={styles.dispatchBlueDot} />
-              <Text style={styles.dispatchLabel}>READY TO DISPATCH</Text>
+      {/* Confirmation Bottom Sheet (Only shows on-demand when coordinator taps Assign) */}
+      {showConfirmSheet && (
+        <View style={[styles.bottomSheet, SHADOWS.nav]}>
+          <View style={styles.sheetHandle} />
+          <View style={styles.sheetTopRow}>
+            <View>
+              <View style={styles.dispatchStatusRow}>
+                <View style={styles.dispatchBlueDot} />
+                <Text style={styles.dispatchLabel}>CONFIRM SUBSTITUTION</Text>
+              </View>
+              <Text style={styles.sheetTitle}>
+                {selectedTeacher === 'shalini' ? 'Assign Mrs. Shalini Raman?' : 'Assign Mr. Karthik Raja?'}
+              </Text>
+              <Text style={styles.sheetSubtitle}>
+                Grade 9-B • Period 3 (10:15 AM – 11:00 AM)
+              </Text>
             </View>
-            <Text style={styles.sheetTitle}>Assign Mr. Karthik Raja?</Text>
-            <Text style={styles.sheetSubtitle}>
-              Grade 9-B • Period 3 (10:15 AM – 11:00 AM)
+
+            <TouchableOpacity
+              onPress={() => setShowConfirmSheet(false)}
+              style={styles.closeSheetBtn}
+            >
+              <X size={18} color={COLORS.slate[500]} />
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.alertNoticeBox}>
+            <Zap size={14} color={COLORS.late} />
+            <Text style={styles.alertNoticeText}>
+              Push notification will be dispatched to faculty member. Timetable and class display will auto-sync.
             </Text>
           </View>
 
-          <View style={styles.targetClassPill}>
-            <Text style={styles.targetClassPillText}>9B</Text>
+          <View style={styles.sheetActionRow}>
+            <TouchableOpacity
+              style={styles.changeButton}
+              onPress={() => setShowConfirmSheet(false)}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.changeButtonText}>Cancel</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.confirmDispatchButton}
+              onPress={handleConfirm}
+              activeOpacity={0.88}
+            >
+              <Text style={styles.confirmDispatchText}>Confirm Allocation</Text>
+              <Send size={14} color="#FFFFFF" />
+            </TouchableOpacity>
           </View>
         </View>
-
-        <View style={styles.alertNoticeBox}>
-          <Zap size={14} color={COLORS.late} />
-          <Text style={styles.alertNoticeText}>
-            Instant push notification & SMS will be dispatched to{' '}
-            <Text style={styles.bold}>Mr. Karthik</Text>. Central timetable and Grade 9-B display will auto-sync.
-          </Text>
-        </View>
-
-        <View style={styles.sheetActionRow}>
-          <TouchableOpacity style={styles.changeButton} activeOpacity={0.8}>
-            <Text style={styles.changeButtonText}>Change</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.confirmDispatchButton}
-            onPress={handleConfirm}
-            activeOpacity={0.88}
-          >
-            <Text style={styles.confirmDispatchText}>Confirm & Dispatch</Text>
-            <Send size={14} color="#FFFFFF" />
-          </TouchableOpacity>
-        </View>
-      </View>
+      )}
     </SafeAreaView>
   );
 }
@@ -1118,6 +1089,14 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '900',
     color: COLORS.brand[700],
+  },
+  closeSheetBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 10,
+    backgroundColor: COLORS.slate[100],
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   alertNoticeBox: {
     flexDirection: 'row',

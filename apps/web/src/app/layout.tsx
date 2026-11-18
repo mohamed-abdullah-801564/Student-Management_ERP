@@ -3,7 +3,7 @@ import './globals.css';
 import NavigationProgressBar from '@/components/NavigationProgressBar';
 
 export const metadata: Metadata = {
-  title: 'Greenwood Academy | Executive Principal Suite',
+  title: 'School Management ERP Portal',
   description: 'Unified School Management ERP — Executive Principal & Administrative Operations Portal',
 };
 

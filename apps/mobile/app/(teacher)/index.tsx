@@ -165,7 +165,7 @@ export default function TeacherDashboard() {
         {/* ========================================================= */}
         {workspaceMode === 'coordinator' && (
           <View style={styles.coordinatorViewWrapper}>
-            {/* TODAY'S WING PULSE (MINIMAL AIRY METRICS CARD WITH ANIMATED NUMBER TICKER) */}
+            {/* TODAY'S WING PULSE */}
             <View style={[styles.pulseCard, SHADOWS.card]}>
               <View style={styles.pulseCardHeader}>
                 <Text style={styles.pulseCardTitle}>TODAY'S WING PULSE • 32 SECTIONS</Text>
@@ -222,7 +222,15 @@ export default function TeacherDashboard() {
               </View>
             </View>
 
-            {/* 4 CIRCULAR DUTY ACTION BUTTONS */}
+            {/* CAMPUS NOTE TICKER BANNER (Placed BEFORE Quick Actions) */}
+            <View style={styles.campusNoteBanner}>
+              <Info size={18} color="#4F46E5" strokeWidth={2.2} />
+              <Text style={styles.campusNoteText}>
+                CBSE Pre-Board moderation meeting scheduled for 3:30 PM in AV Room 2.
+              </Text>
+            </View>
+
+            {/* CIRCULAR DUTY ACTION BUTTONS (Placed at the Bottom) */}
             <View style={styles.quickActionsHeader}>
               <Text style={styles.sectionTitle}>Coordinator Action Desk</Text>
             </View>
@@ -240,25 +248,7 @@ export default function TeacherDashboard() {
                 <Text style={styles.circleActionLabel}>Substitute</Text>
               </TouchableOpacity>
 
-              {/* Button 2: Floor Rounds */}
-              <TouchableOpacity
-                style={styles.circleActionItem}
-                onPress={() => {
-                  Alert.alert(
-                    'Corridor Floor Rounds Logged',
-                    'Period 3 rounds complete for Senior Wing (Class 9 - 12). All classrooms orderly.',
-                    [{ text: 'OK' }]
-                  );
-                }}
-                activeOpacity={0.75}
-              >
-                <View style={[styles.circleButton, { backgroundColor: '#ECFDF5' }]}>
-                  <MapPin size={22} color="#059669" strokeWidth={2.2} />
-                </View>
-                <Text style={styles.circleActionLabel}>Floor Rounds</Text>
-              </TouchableOpacity>
-
-              {/* Button 3: Approvals */}
+              {/* Button 2: Approvals */}
               <TouchableOpacity
                 style={styles.circleActionItem}
                 onPress={() => navigateTo('approvals', '/(teacher)/approvals')}
@@ -277,14 +267,14 @@ export default function TeacherDashboard() {
                 <Text style={styles.circleActionLabel}>Approvals</Text>
               </TouchableOpacity>
 
-              {/* Button 4: Wing Notice */}
+              {/* Button 3: Wing Broadcast Notice */}
               <TouchableOpacity
                 style={styles.circleActionItem}
                 onPress={() => {
                   Alert.alert(
-                    'Broadcast Wing Circular',
-                    'Notification drafted for all Middle & Senior School Faculty.',
-                    [{ text: 'Close' }]
+                    'Wing Broadcast',
+                    'Circular notice drafted for all Middle & Senior School Faculty.',
+                    [{ text: 'OK' }]
                   );
                 }}
                 activeOpacity={0.75}
@@ -294,14 +284,6 @@ export default function TeacherDashboard() {
                 </View>
                 <Text style={styles.circleActionLabel}>Wing Notice</Text>
               </TouchableOpacity>
-            </View>
-
-            {/* CAMPUS NOTE TICKER BANNER */}
-            <View style={styles.campusNoteBanner}>
-              <Info size={18} color="#4F46E5" strokeWidth={2.2} />
-              <Text style={styles.campusNoteText}>
-                CBSE Pre-Board moderation meeting scheduled for 3:30 PM in AV Room 2.
-              </Text>
             </View>
           </View>
         )}
@@ -345,158 +327,183 @@ export default function TeacherDashboard() {
                     activeSegment === 'class8b' && styles.segmentTextActive,
                   ]}
                 >
-                  Class 11-A (In-Charge)
+                  Class 8-B (In-Charge)
                 </Text>
               </TouchableOpacity>
             </View>
 
-            {/* ONGOING PERIOD HERO CARD (Period 3 Physics) */}
-            <View style={[styles.heroCard, SHADOWS.soft]}>
-              <View style={styles.heroHeader}>
-                <View style={styles.heroLivePill}>
-                  <View style={styles.livePulseDot} />
-                  <Text style={styles.heroLiveText}>PERIOD 3 ONGOING</Text>
-                </View>
-                <View style={styles.timeTag}>
-                  <Clock size={12} color="rgba(255,255,255,0.85)" />
-                  <Text style={styles.timeTagText}>10:15 - 11:00 AM</Text>
-                </View>
-              </View>
-
-              <View style={styles.heroBody}>
-                <Text style={styles.heroClassTitle}>Class 11-A Physics</Text>
-                <View style={styles.heroMetaRow}>
-                  <View style={styles.roomBadge}>
-                    <MapPin size={11} color="rgba(255,255,255,0.9)" />
-                    <Text style={styles.roomBadgeText}>Physics Lab Block 102</Text>
+            {activeSegment === 'timetable' ? (
+              <>
+                {/* ONGOING PERIOD HERO CARD (Period 3 Physics) */}
+                <View style={[styles.heroCard, SHADOWS.soft]}>
+                  <View style={styles.heroHeader}>
+                    <View style={styles.heroLivePill}>
+                      <View style={styles.livePulseDot} />
+                      <Text style={styles.heroLiveText}>PERIOD 3 ONGOING</Text>
+                    </View>
+                    <View style={styles.timeTag}>
+                      <Clock size={12} color="rgba(255,255,255,0.85)" />
+                      <Text style={styles.timeTagText}>10:15 - 11:00 AM</Text>
+                    </View>
                   </View>
-                  <Text style={styles.heroPortionText}>
-                    Unit 3: Laws of Motion & Friction Vectors
-                  </Text>
-                </View>
-              </View>
 
-              <View style={styles.heroActionsRow}>
+                  <View style={styles.heroBody}>
+                    <Text style={styles.heroClassTitle}>Class 11-A Physics</Text>
+                    <View style={styles.heroMetaRow}>
+                      <View style={styles.roomBadge}>
+                        <MapPin size={11} color="rgba(255,255,255,0.9)" />
+                        <Text style={styles.roomBadgeText}>Physics Lab Block 102</Text>
+                      </View>
+                      <Text style={styles.heroPortionText}>
+                        Unit 3: Laws of Motion & Friction
+                      </Text>
+                    </View>
+                  </View>
+
+                  <View style={styles.heroActionsRow}>
+                    <TouchableOpacity
+                      style={styles.heroPrimaryBtn}
+                      onPress={() => navigateTo('attendance', '/(teacher)/attendance')}
+                      activeOpacity={0.85}
+                    >
+                      <CalendarCheck size={15} color={COLORS.brand[700]} />
+                      <Text style={styles.heroPrimaryBtnText}>Take Attendance</Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      style={styles.heroSecondaryBtn}
+                      onPress={() => navigateTo('homework', '/(teacher)/homework')}
+                      activeOpacity={0.85}
+                    >
+                      <BookOpen size={15} color="#FFFFFF" />
+                      <Text style={styles.heroSecondaryBtnText}>Post Homework</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+
+                {/* UPCOMING CLASS PREVIEW (Clean Professional White Card, No Yellow Slop) */}
                 <TouchableOpacity
-                  style={styles.heroPrimaryBtn}
-                  onPress={() => navigateTo('attendance', '/(teacher)/attendance')}
+                  style={[styles.cleanScheduleCard, SHADOWS.card]}
+                  onPress={() => navigateTo('timetable', '/(teacher)/timetable')}
                   activeOpacity={0.85}
                 >
-                  <CalendarCheck size={15} color={COLORS.brand[700]} />
-                  <Text style={styles.heroPrimaryBtnText}>Take Roll Attendance</Text>
+                  <View style={styles.cleanScheduleLeft}>
+                    <View style={styles.cleanClockIcon}>
+                      <Clock size={16} color={COLORS.brand[600]} strokeWidth={2.2} />
+                    </View>
+                    <View>
+                      <Text style={styles.cleanScheduleTag}>UPCOMING • PERIOD 4</Text>
+                      <Text style={styles.cleanScheduleTitle}>
+                        Class 9-A Physics • 11:15 AM
+                      </Text>
+                      <Text style={styles.cleanScheduleSub}>Room 204 • Optics & Ray Diagrams</Text>
+                    </View>
+                  </View>
+                  <ChevronRight size={16} color={COLORS.slate[400]} />
                 </TouchableOpacity>
 
-                <TouchableOpacity
-                  style={styles.heroSecondaryBtn}
-                  onPress={() => navigateTo('homework', '/(teacher)/homework')}
-                  activeOpacity={0.85}
-                >
-                  <BookOpen size={15} color="#FFFFFF" />
-                  <Text style={styles.heroSecondaryBtnText}>Post Homework</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-
-            {/* QUICK ACTIONS FOR TEACHING */}
-            <View style={styles.quickActionsHeader}>
-              <Text style={styles.sectionTitle}>Teaching Quick Actions</Text>
-            </View>
-
-            <View style={styles.circleButtonsRow}>
-              <TouchableOpacity
-                style={styles.circleActionItem}
-                onPress={() => navigateTo('attendance', '/(teacher)/attendance')}
-                activeOpacity={0.75}
-              >
-                <View style={[styles.circleButton, { backgroundColor: '#ECFDF5' }]}>
-                  <CalendarCheck size={22} color={COLORS.present} strokeWidth={2.2} />
+                {/* QUICK ACTIONS FOR TEACHING (Placed AT THE BOTTOM) */}
+                <View style={styles.quickActionsHeader}>
+                  <Text style={styles.sectionTitle}>Teaching Quick Actions</Text>
                 </View>
-                <Text style={styles.circleActionLabel}>Attendance</Text>
-              </TouchableOpacity>
 
-              <TouchableOpacity
-                style={styles.circleActionItem}
-                onPress={() => navigateTo('homework', '/(teacher)/homework')}
-                activeOpacity={0.75}
-              >
-                <View style={[styles.circleButton, { backgroundColor: '#EEF2FF' }]}>
-                  <BookOpen size={22} color={COLORS.brand[600]} strokeWidth={2.2} />
+                <View style={styles.circleButtonsRow}>
+                  <TouchableOpacity
+                    style={styles.circleActionItem}
+                    onPress={() => navigateTo('attendance', '/(teacher)/attendance')}
+                    activeOpacity={0.75}
+                  >
+                    <View style={[styles.circleButton, { backgroundColor: '#ECFDF5' }]}>
+                      <CalendarCheck size={22} color={COLORS.present} strokeWidth={2.2} />
+                    </View>
+                    <Text style={styles.circleActionLabel}>Attendance</Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={styles.circleActionItem}
+                    onPress={() => navigateTo('homework', '/(teacher)/homework')}
+                    activeOpacity={0.75}
+                  >
+                    <View style={[styles.circleButton, { backgroundColor: '#EEF2FF' }]}>
+                      <BookOpen size={22} color={COLORS.brand[600]} strokeWidth={2.2} />
+                    </View>
+                    <Text style={styles.circleActionLabel}>Homework</Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={styles.circleActionItem}
+                    onPress={() => navigateTo('marks', '/(teacher)/marks')}
+                    activeOpacity={0.75}
+                  >
+                    <View style={[styles.circleButton, { backgroundColor: '#FAF5FF' }]}>
+                      <Award size={22} color="#9333EA" strokeWidth={2.2} />
+                    </View>
+                    <Text style={styles.circleActionLabel}>Enter Marks</Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={styles.circleActionItem}
+                    onPress={() => navigateTo('timetable', '/(teacher)/timetable')}
+                    activeOpacity={0.75}
+                  >
+                    <View style={[styles.circleButton, { backgroundColor: '#FFFBEB' }]}>
+                      <Clock size={22} color={COLORS.lateText} strokeWidth={2.2} />
+                    </View>
+                    <Text style={styles.circleActionLabel}>Timetable</Text>
+                  </TouchableOpacity>
                 </View>
-                <Text style={styles.circleActionLabel}>Homework</Text>
-              </TouchableOpacity>
+              </>
+            ) : (
+              /* CLASS 8-B IN-CHARGE HUB */
+              <View style={styles.inChargeHubWrapper}>
+                <View style={[styles.inChargeCard, SHADOWS.card]}>
+                  <View style={styles.inChargeHeader}>
+                    <View>
+                      <Text style={styles.inChargeTitle}>Grade 8 – Section B</Text>
+                      <Text style={styles.inChargeSub}>Form Tutor: Mrs. Deepa R. • Room 204</Text>
+                    </View>
+                    <View style={styles.inChargeActivePill}>
+                      <Text style={styles.inChargeActivePillText}>38 Enrolled</Text>
+                    </View>
+                  </View>
 
-              <TouchableOpacity
-                style={styles.circleActionItem}
-                onPress={() => navigateTo('marks', '/(teacher)/marks')}
-                activeOpacity={0.75}
-              >
-                <View style={[styles.circleButton, { backgroundColor: '#FAF5FF' }]}>
-                  <Award size={22} color="#9333EA" strokeWidth={2.2} />
-                </View>
-                <Text style={styles.circleActionLabel}>Enter Marks</Text>
-              </TouchableOpacity>
+                  <View style={styles.inChargeStatsRow}>
+                    <View style={styles.inChargeStatCol}>
+                      <Text style={styles.inChargeStatNum}>36</Text>
+                      <Text style={styles.inChargeStatLbl}>Present Today</Text>
+                    </View>
+                    <View style={styles.inChargeStatDivider} />
+                    <View style={styles.inChargeStatCol}>
+                      <Text style={[styles.inChargeStatNum, { color: '#DC2626' }]}>2</Text>
+                      <Text style={styles.inChargeStatLbl}>Absent</Text>
+                    </View>
+                    <View style={styles.inChargeStatDivider} />
+                    <View style={styles.inChargeStatCol}>
+                      <Text style={[styles.inChargeStatNum, { color: '#059669' }]}>94.7%</Text>
+                      <Text style={styles.inChargeStatLbl}>Attendance</Text>
+                    </View>
+                  </View>
 
-              <TouchableOpacity
-                style={styles.circleActionItem}
-                onPress={() => navigateTo('timetable', '/(teacher)/timetable')}
-                activeOpacity={0.75}
-              >
-                <View style={[styles.circleButton, { backgroundColor: '#FFFBEB' }]}>
-                  <Clock size={22} color={COLORS.lateText} strokeWidth={2.2} />
-                </View>
-                <Text style={styles.circleActionLabel}>Timetable</Text>
-              </TouchableOpacity>
-            </View>
+                  <View style={styles.inChargeActionsRow}>
+                    <TouchableOpacity
+                      style={styles.inChargeBtnPrimary}
+                      onPress={() => navigateTo('attendance', '/(teacher)/attendance')}
+                    >
+                      <CalendarCheck size={14} color="#FFFFFF" />
+                      <Text style={styles.inChargeBtnPrimaryText}>Take Roll Call</Text>
+                    </TouchableOpacity>
 
-            {/* CONTEXTUAL SUBSTITUTION NOTICE */}
-            <TouchableOpacity
-              style={[styles.substituteNoticeCard, SHADOWS.card]}
-              onPress={() => navigateTo('substitute', '/(teacher)/substitute')}
-              activeOpacity={0.85}
-            >
-              <View style={styles.substituteNoticeIcon}>
-                <UserCheck size={18} color={COLORS.lateText} strokeWidth={2.2} />
-              </View>
-              <View style={{ flex: 1 }}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                  <Text style={styles.substituteNoticeTitle}>Period 4 Substitute Covered</Text>
-                  <View style={styles.substituteAlertTag}>
-                    <Text style={styles.substituteAlertTagText}>Assigned</Text>
+                    <TouchableOpacity
+                      style={styles.inChargeBtnSecondary}
+                      onPress={() => navigateTo('marks', '/(teacher)/marks')}
+                    >
+                      <Award size={14} color={COLORS.brand[700]} />
+                      <Text style={styles.inChargeBtnSecondaryText}>View Gradebook</Text>
+                    </TouchableOpacity>
                   </View>
                 </View>
-                <Text style={styles.substituteNoticeSub}>
-                  Class 9-A Physics covered by Mrs. Deepa R.
-                </Text>
               </View>
-              <ChevronRight size={16} color={COLORS.slate[400]} />
-            </TouchableOpacity>
-
-            {/* NEXT UP CLASS PREVIEW CARD (Clean, Minimal & High-Affordance) */}
-            <TouchableOpacity
-              style={[styles.nextUpCard, SHADOWS.card]}
-              onPress={() => navigateTo('timetable', '/(teacher)/timetable')}
-              activeOpacity={0.85}
-            >
-              <View style={styles.nextUpLeft}>
-                <View style={styles.nextUpIconCircle}>
-                  <Clock size={16} color={COLORS.brand[600]} strokeWidth={2.2} />
-                </View>
-                <View>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                    <Text style={styles.nextUpLabel}>UPCOMING PERIOD 4</Text>
-                    <Text style={styles.nextUpTime}>11:15 - 12:00 PM</Text>
-                  </View>
-                  <Text style={styles.nextUpClassTitle}>
-                    Class 9-A Physics • Room 204
-                  </Text>
-                </View>
-              </View>
-
-              <View style={styles.nextUpRight}>
-                <Text style={styles.nextUpLinkText}>Full Timetable</Text>
-                <ChevronRight size={14} color={COLORS.brand[600]} />
-              </View>
-            </TouchableOpacity>
+            )}
           </View>
         )}
       </ScrollView>
@@ -1337,5 +1344,151 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '700',
     color: COLORS.brand[700],
+  },
+
+  // Clean Schedule Card (Replaces Yellow AI Slop)
+  cleanScheduleCard: {
+    backgroundColor: COLORS.white,
+    borderRadius: 16,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: COLORS.slate[200],
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 16,
+  },
+  cleanScheduleLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    flex: 1,
+  },
+  cleanClockIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: COLORS.brand[50],
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cleanScheduleTag: {
+    fontSize: 9.5,
+    fontWeight: '800',
+    color: COLORS.brand[600],
+    letterSpacing: 0.5,
+  },
+  cleanScheduleTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: COLORS.slate[900],
+    marginTop: 1,
+  },
+  cleanScheduleSub: {
+    fontSize: 11,
+    color: COLORS.slate[500],
+    marginTop: 1,
+  },
+
+  // In-Charge Hub
+  inChargeHubWrapper: {
+    marginTop: 4,
+  },
+  inChargeCard: {
+    backgroundColor: COLORS.white,
+    borderRadius: 18,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: COLORS.slate[200],
+  },
+  inChargeHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 14,
+  },
+  inChargeTitle: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: COLORS.slate[900],
+  },
+  inChargeSub: {
+    fontSize: 11,
+    color: COLORS.slate[500],
+    marginTop: 2,
+  },
+  inChargeActivePill: {
+    backgroundColor: COLORS.brand[50],
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 8,
+  },
+  inChargeActivePillText: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: COLORS.brand[700],
+  },
+  inChargeStatsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-around',
+    backgroundColor: COLORS.slate[50],
+    borderRadius: 12,
+    paddingVertical: 12,
+    marginBottom: 14,
+  },
+  inChargeStatCol: {
+    alignItems: 'center',
+  },
+  inChargeStatNum: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: COLORS.slate[900],
+  },
+  inChargeStatLbl: {
+    fontSize: 10,
+    color: COLORS.slate[500],
+    marginTop: 1,
+  },
+  inChargeStatDivider: {
+    width: 1,
+    height: 24,
+    backgroundColor: COLORS.slate[200],
+  },
+  inChargeActionsRow: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  inChargeBtnPrimary: {
+    flex: 1,
+    backgroundColor: COLORS.brand[600],
+    borderRadius: 10,
+    paddingVertical: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+  },
+  inChargeBtnPrimaryText: {
+    color: '#FFFFFF',
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  inChargeBtnSecondary: {
+    flex: 1,
+    backgroundColor: COLORS.slate[50],
+    borderWidth: 1,
+    borderColor: COLORS.slate[200],
+    borderRadius: 10,
+    paddingVertical: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+  },
+  inChargeBtnSecondaryText: {
+    color: COLORS.slate[700],
+    fontSize: 11,
+    fontWeight: '700',
   },
 });

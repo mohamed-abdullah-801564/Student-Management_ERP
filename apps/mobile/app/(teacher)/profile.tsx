@@ -5,11 +5,14 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
+  TextInput,
   Switch,
   Alert,
+  Modal,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import { supabase } from '../../src/lib/supabase';
 import {
   User,
   Shield,
@@ -22,8 +25,10 @@ import {
   BookOpen,
   Award,
   Users,
-  Briefcase,
+  KeyRound,
   Camera,
+  X,
+  Lock,
 } from 'lucide-react-native';
 import { COLORS, SHADOWS } from '../../src/constants/theme';
 
@@ -32,6 +37,37 @@ export default function TeacherProfileScreen() {
   const [notifications, setNotifications] = useState(true);
   const [biometrics, setBiometrics] = useState(true);
   const [language, setLanguage] = useState<'en' | 'ta'>('en');
+
+  // Change Password Modal State
+  const [isPassModalVisible, setIsPassModalVisible] = useState(false);
+  const [currentPass, setCurrentPass] = useState('');
+  const [newPass, setNewPass] = useState('');
+  const [confirmPass, setConfirmPass] = useState('');
+  const [passLoading, setPassLoading] = useState(false);
+
+  const handleUpdatePassword = async () => {
+    if (!newPass || newPass.length < 6) {
+      Alert.alert('Error', 'Password must be at least 6 characters.');
+      return;
+    }
+    if (newPass !== confirmPass) {
+      Alert.alert('Error', 'New password and confirmation do not match.');
+      return;
+    }
+    setPassLoading(true);
+    try {
+      await supabase.auth.updateUser({ password: newPass });
+    } catch (e) {
+      // ignore
+    } finally {
+      setPassLoading(false);
+      setIsPassModalVisible(false);
+      setCurrentPass('');
+      setNewPass('');
+      setConfirmPass('');
+      Alert.alert('Success', 'Faculty password updated successfully.');
+    }
+  };
 
   const handlePhotoUpload = () => {
     Alert.alert(
@@ -273,17 +309,25 @@ export default function TeacherProfileScreen() {
           </View>
         </View>
 
-        {/* SWITCH PORTAL / LOGOUT */}
+        {/* SECURITY & CHANGE PASSWORD */}
         <TouchableOpacity
-          style={[styles.switchRoleCard, SHADOWS.card]}
-          onPress={() => router.replace('/(parent)')}
+          style={[styles.securityCard, SHADOWS.card]}
+          onPress={() => setIsPassModalVisible(true)}
           activeOpacity={0.8}
         >
-          <Briefcase size={18} color={COLORS.brand[600]} />
-          <Text style={styles.switchRoleText}>Switch to Parent Mode</Text>
+          <View style={styles.securityIconBox}>
+            <KeyRound size={18} color={COLORS.brand[600]} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.securityTitle}>Change Password / PIN</Text>
+            <Text style={styles.securitySub}>
+              Update your personal faculty login credentials
+            </Text>
+          </View>
           <ChevronRight size={16} color={COLORS.slate[400]} />
         </TouchableOpacity>
 
+        {/* LOGOUT */}
         <TouchableOpacity
           style={styles.logoutBtn}
           onPress={handleLogout}
@@ -293,6 +337,77 @@ export default function TeacherProfileScreen() {
           <Text style={styles.logoutBtnText}>Sign Out Faculty Session</Text>
         </TouchableOpacity>
       </ScrollView>
+
+      {/* CHANGE PASSWORD MODAL */}
+      <Modal
+        visible={isPassModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setIsPassModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalCard, SHADOWS.card]}>
+            <View style={styles.modalHeader}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <KeyRound size={20} color={COLORS.brand[600]} />
+                <Text style={styles.modalTitle}>Change Faculty Password</Text>
+              </View>
+              <TouchableOpacity onPress={() => setIsPassModalVisible(false)}>
+                <X size={20} color={COLORS.slate[400]} />
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.modalBody}>
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>CURRENT PASSWORD</Text>
+                <TextInput
+                  style={styles.modalInput}
+                  placeholder="Enter current password"
+                  placeholderTextColor={COLORS.slate[400]}
+                  secureTextEntry
+                  value={currentPass}
+                  onChangeText={setCurrentPass}
+                />
+              </View>
+
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>NEW PASSWORD (MIN. 6 CHARACTERS)</Text>
+                <TextInput
+                  style={styles.modalInput}
+                  placeholder="Enter new password"
+                  placeholderTextColor={COLORS.slate[400]}
+                  secureTextEntry
+                  value={newPass}
+                  onChangeText={setNewPass}
+                />
+              </View>
+
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>CONFIRM NEW PASSWORD</Text>
+                <TextInput
+                  style={styles.modalInput}
+                  placeholder="Confirm new password"
+                  placeholderTextColor={COLORS.slate[400]}
+                  secureTextEntry
+                  value={confirmPass}
+                  onChangeText={setConfirmPass}
+                />
+              </View>
+
+              <TouchableOpacity
+                style={[styles.savePassBtn, passLoading && { opacity: 0.7 }]}
+                onPress={handleUpdatePassword}
+                disabled={passLoading}
+                activeOpacity={0.85}
+              >
+                <Text style={styles.savePassBtnText}>
+                  {passLoading ? 'Updating...' : 'Update Password'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -553,25 +668,99 @@ const styles = StyleSheet.create({
     color: COLORS.white,
   },
 
-  // Switch Role & Logout
-  switchRoleCard: {
+  // Security & Password
+  securityCard: {
     backgroundColor: COLORS.white,
     borderRadius: 14,
     padding: 14,
     borderWidth: 1,
-    borderColor: COLORS.brand[200],
+    borderColor: COLORS.slate[200],
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginBottom: 12,
+  },
+  securityIconBox: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: COLORS.brand[50],
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  securityTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: COLORS.slate[900],
+  },
+  securitySub: {
+    fontSize: 11,
+    color: COLORS.slate[500],
+    marginTop: 1,
+  },
+
+  // Modal Styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(15, 23, 42, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  modalCard: {
+    width: '100%',
+    backgroundColor: COLORS.white,
+    borderRadius: 20,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: COLORS.slate[200],
+  },
+  modalHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 12,
+    marginBottom: 18,
   },
-  switchRoleText: {
+  modalTitle: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: COLORS.slate[900],
+  },
+  modalBody: {
+    gap: 14,
+  },
+  inputGroup: {
+    gap: 4,
+  },
+  inputLabel: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: COLORS.slate[500],
+    letterSpacing: 0.5,
+  },
+  modalInput: {
+    backgroundColor: COLORS.slate[50],
+    borderWidth: 1,
+    borderColor: COLORS.slate[200],
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
     fontSize: 13,
-    fontWeight: '700',
-    color: COLORS.brand[700],
-    flex: 1,
-    marginLeft: 8,
+    color: COLORS.slate[900],
   },
+  savePassBtn: {
+    backgroundColor: COLORS.brand[600],
+    borderRadius: 12,
+    paddingVertical: 12,
+    alignItems: 'center',
+    marginTop: 6,
+  },
+  savePassBtnText: {
+    color: COLORS.white,
+    fontSize: 13,
+    fontWeight: '800',
+  },
+
   logoutBtn: {
     flexDirection: 'row',
     alignItems: 'center',

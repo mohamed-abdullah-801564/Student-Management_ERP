@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Sidebar from '@/components/Sidebar';
 import Header from '@/components/Header';
@@ -18,6 +18,7 @@ import {
   Clock,
   ChevronRight,
   ShieldAlert,
+  RefreshCw,
 } from 'lucide-react';
 
 interface ClassAttendanceItem {
@@ -111,6 +112,43 @@ const CLASS_ATTENDANCE_DATA: ClassAttendanceItem[] = [
 export default function AttendanceRollsPage() {
   const [activeSession, setActiveSession] = useState<'morning' | 'afternoon'>('morning');
   const [selectedFilter, setSelectedFilter] = useState('ALL');
+
+  // Live Supabase Attendance State
+  const [realRecords, setRealRecords] = useState<any[]>([]);
+  const [loadingAttendance, setLoadingAttendance] = useState(true);
+  const [summary, setSummary] = useState({
+    totalStudents: 1420,
+    presentToday: 1362,
+    absentToday: 58,
+    attendanceRate: '95.9',
+  });
+
+  const fetchAttendance = async () => {
+    try {
+      setLoadingAttendance(true);
+      const res = await fetch('/api/attendance');
+      const data = await res.json();
+      if (data.records) {
+        setRealRecords(data.records);
+      }
+      if (data.summary && data.summary.totalStudents > 0) {
+        setSummary({
+          totalStudents: data.summary.totalStudents,
+          presentToday: data.summary.presentToday,
+          absentToday: data.summary.absentToday,
+          attendanceRate: data.summary.attendanceRate,
+        });
+      }
+    } catch (err) {
+      console.log('Error loading attendance from Supabase:', err);
+    } finally {
+      setLoadingAttendance(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchAttendance();
+  }, []);
 
   const filteredClasses = CLASS_ATTENDANCE_DATA.filter((c) => {
     if (selectedFilter === 'PERFECT') return c.status === 'perfect';
@@ -310,6 +348,93 @@ export default function AttendanceRollsPage() {
                   </div>
                 </div>
               ))}
+            </div>
+          </div>
+
+          {/* REAL SUPABASE ATTENDANCE FEED */}
+          <div className="bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden">
+            <div className="p-4 border-b border-slate-100 flex items-center justify-between">
+              <div>
+                <h3 className="text-sm font-extrabold text-slate-900">
+                  Live Attendance Records from Supabase
+                </h3>
+                <p className="text-xs text-slate-500">
+                  Synchronized from Teacher mobile app rapid attendance submissions
+                </p>
+              </div>
+              <button
+                onClick={fetchAttendance}
+                disabled={loadingAttendance}
+                className="p-1.5 rounded-lg border border-slate-200 hover:bg-slate-50 text-slate-600 transition-colors"
+                title="Refresh from Supabase"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${loadingAttendance ? 'animate-spin text-indigo-600' : ''}`} />
+              </button>
+            </div>
+
+            <div className="overflow-x-auto">
+              {loadingAttendance ? (
+                <div className="py-8 text-center text-xs text-slate-400 flex items-center justify-center gap-2">
+                  <RefreshCw className="w-4 h-4 animate-spin text-indigo-600" />
+                  <span>Loading live roll feed...</span>
+                </div>
+              ) : realRecords.length === 0 ? (
+                <div className="py-8 text-center text-xs text-slate-400">
+                  No attendance entries submitted yet for today. Submissions from the Mobile App will appear here in real time.
+                </div>
+              ) : (
+                <table className="w-full text-left text-xs">
+                  <thead className="bg-slate-50 text-[10px] font-bold uppercase tracking-wider text-slate-500 border-b border-slate-200">
+                    <tr>
+                      <th className="py-3 px-4">Student</th>
+                      <th className="py-3 px-4">Date</th>
+                      <th className="py-3 px-4">Session</th>
+                      <th className="py-3 px-4 text-center">Status</th>
+                      <th className="py-3 px-4">Remarks</th>
+                      <th className="py-3 px-4 text-right">Logged At</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
+                    {realRecords.map((r) => (
+                      <tr key={r.id} className="hover:bg-slate-50/70 transition-colors">
+                        <td className="py-3 px-4">
+                          <span className="font-extrabold text-slate-900">
+                            {r.students?.first_name} {r.students?.last_name}
+                          </span>
+                          <span className="block text-[10px] font-mono text-slate-400">
+                            Roll #{r.students?.roll_no} • {r.students?.admission_no}
+                          </span>
+                        </td>
+                        <td className="py-3 px-4 font-mono text-slate-600">
+                          {r.attendance_date}
+                        </td>
+                        <td className="py-3 px-4 capitalize">
+                          {r.session}
+                        </td>
+                        <td className="py-3 px-4 text-center">
+                          <span
+                            className={`inline-block px-2.5 py-0.5 rounded text-[10px] font-bold ${
+                              r.status === 'P'
+                                ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                                : r.status === 'A'
+                                ? 'bg-rose-50 text-rose-700 border border-rose-200'
+                                : 'bg-amber-50 text-amber-700 border border-amber-200'
+                            }`}
+                          >
+                            {r.status === 'P' ? 'Present' : r.status === 'A' ? 'Absent' : 'Late'}
+                          </span>
+                        </td>
+                        <td className="py-3 px-4 text-slate-500 italic text-[11px]">
+                          {r.remarks || '—'}
+                        </td>
+                        <td className="py-3 px-4 text-right font-mono text-[10px] text-slate-400">
+                          {new Date(r.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
             </div>
           </div>
         </main>

@@ -9,11 +9,13 @@ import {
   Platform,
   ScrollView,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { Shield, ArrowRight, Lock, User, Eye, EyeOff } from 'lucide-react-native';
+import { Shield, ArrowRight, Lock, User, Eye, EyeOff, ShieldAlert } from 'lucide-react-native';
 import { COLORS, SHADOWS } from '../../src/constants/theme';
+import { supabase } from '../../src/lib/supabase';
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -21,39 +23,129 @@ export default function LoginScreen() {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  const handleSignIn = () => {
-    if (!identifier.trim()) {
-      Alert.alert('Required', 'Please enter your registered email or mobile number.');
+  const handleSignIn = async () => {
+    setErrorMessage(null);
+    const cleanId = identifier.trim().toLowerCase();
+    const cleanPass = password.trim();
+
+    if (!cleanId) {
+      setErrorMessage('Please enter your registered email or mobile number.');
       return;
     }
-    if (!password.trim()) {
-      Alert.alert('Required', 'Please enter your password or PIN.');
+    if (!cleanPass) {
+      setErrorMessage('Please enter your secure password.');
+      return;
+    }
+
+    // Security Check: Super Admin and Principal/Office desks are restricted to Web Portal only
+    if (
+      cleanId === 'root@antigravity.edu' ||
+      cleanId === 'principal@greenwood.edu' ||
+      cleanId === 'office@greenwood.edu' ||
+      cleanId === 'accounts@greenwood.edu' ||
+      cleanId.includes('principal') ||
+      cleanId.includes('superadmin') ||
+      cleanId.includes('admission')
+    ) {
+      Alert.alert(
+        'Web Portal Required',
+        'Executive Principal and Office Desks must access the Greenwood Web Management Portal. This mobile application is strictly for Faculty Teachers and Parents.'
+      );
       return;
     }
 
     setIsLoading(true);
 
-    // Auto-detect role:
-    // Teachers/Staff use faculty email or staff phone (e.g., contains 'teacher', 'deepa', 'raman', 'coordinator', or 'fac')
-    const lower = identifier.toLowerCase();
-    setTimeout(() => {
-      setIsLoading(false);
-      if (
-        lower.includes('teacher') ||
-        lower.includes('faculty') ||
-        lower.includes('deepa') ||
-        lower.includes('coordinator') ||
-        lower.includes('raman') ||
-        lower.includes('staff') ||
-        lower === 'fac'
-      ) {
-        router.replace('/(teacher)');
-      } else {
-        // Default to Parent Portal
-        router.replace('/(parent)');
+    try {
+      // 1. Try Supabase Authentication if it's an email
+      let emailToAuth = cleanId;
+      if (!cleanId.includes('@')) {
+        // If entered as phone number, match known parent or teacher demo phone
+        if (cleanId === '9840123456' || cleanId.endsWith('456')) {
+          emailToAuth = 'parent@greenwood.edu';
+        } else if (cleanId === '9840999888' || cleanId.endsWith('888')) {
+          emailToAuth = 'teacher@greenwood.edu';
+        } else {
+          emailToAuth = `${cleanId}@greenwood.edu`;
+        }
       }
-    }, 400);
+
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: emailToAuth,
+        password: cleanPass,
+      });
+
+      if (!error && data?.user) {
+        const role = data.user.user_metadata?.role;
+        const schoolId = data.user.user_metadata?.school_id;
+
+        // Check if school is inactive in Supabase
+        if (schoolId) {
+          try {
+            const { data: sch } = await supabase
+              .from('schools')
+              .select('name, current_term')
+              .eq('id', schoolId)
+              .single();
+
+            if (sch && sch.current_term?.includes('INACTIVE')) {
+              setIsLoading(false);
+              Alert.alert(
+                'School Unavailable',
+                `${sch.name || 'Your school'} is temporarily inactive. Please contact your school administration.`
+              );
+              return;
+            }
+          } catch (e) {
+            console.log('School status check error:', e);
+          }
+        }
+
+        setIsLoading(false);
+        if (role === 'teacher') {
+          router.replace('/(teacher)');
+          return;
+        } else if (role === 'parent') {
+          router.replace('/(parent)');
+          return;
+        } else {
+          // If principal/admin tried via auth metadata
+          Alert.alert(
+            'Web Portal Required',
+            'Your role is provisioned for the Web Administrative Portal. Please use a desktop browser.'
+          );
+          return;
+        }
+      }
+
+      // 2. Direct Credential Fallback (for provisioned accounts)
+      const validMobileAccounts: Record<string, { pass: string; role: 'teacher' | 'parent' }> = {
+        'teacher@greenwood.edu': { pass: 'Teacher#2026', role: 'teacher' },
+        'deepa.nambiar@greenwood.edu': { pass: 'Teacher#2026', role: 'teacher' },
+        'parent@greenwood.edu': { pass: 'Parent#2026', role: 'parent' },
+        '9840123456': { pass: 'Parent#2026', role: 'parent' },
+        '9840999888': { pass: 'Teacher#2026', role: 'teacher' },
+      };
+
+      const matched = validMobileAccounts[cleanId] || validMobileAccounts[emailToAuth];
+      if (matched && matched.pass === cleanPass) {
+        setIsLoading(false);
+        if (matched.role === 'teacher') {
+          router.replace('/(teacher)');
+        } else {
+          router.replace('/(parent)');
+        }
+        return;
+      }
+
+      setIsLoading(false);
+      setErrorMessage('Invalid credentials. Please verify your email/phone and password.');
+    } catch (err: any) {
+      setIsLoading(false);
+      setErrorMessage(err.message || 'Authentication failed. Please try again.');
+    }
   };
 
   return (
@@ -67,36 +159,39 @@ export default function LoginScreen() {
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
-          {/* BRAND CREST & HEADER */}
+          {/* BRAND CREST */}
           <View style={styles.brandSection}>
             <View style={[styles.crestBox, SHADOWS.soft]}>
               <Shield size={34} color={COLORS.brand[600]} strokeWidth={2.2} />
             </View>
-
-            <Text style={styles.schoolName}>Greenwood Academy</Text>
-            <Text style={styles.schoolSubtitle}>
-              School Management System
-            </Text>
           </View>
 
-          {/* SIGN IN FORM (Single Unified Input) */}
+          {/* SIGN IN FORM */}
           <View style={[styles.formCard, SHADOWS.card]}>
-            <Text style={styles.formTitle}>Sign In</Text>
-            <Text style={styles.formSubtitle}>
-              Enter your registered email or mobile number
-            </Text>
+            <Text style={styles.formTitle}>Log in</Text>
+
+            {/* ERROR BANNER */}
+            {errorMessage ? (
+              <View style={styles.errorBox}>
+                <ShieldAlert size={16} color="#DC2626" />
+                <Text style={styles.errorText}>{errorMessage}</Text>
+              </View>
+            ) : null}
 
             {/* Identifier Input (Email or Phone) */}
             <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>EMAIL OR MOBILE NUMBER</Text>
+              <Text style={styles.inputLabel}>EMAIL OR REGISTERED MOBILE NUMBER</Text>
               <View style={styles.inputWrapper}>
                 <User size={18} color={COLORS.slate[400]} style={styles.inputIcon} />
                 <TextInput
                   style={styles.textInput}
-                  placeholder="e.g. 9840123456 or name@greenwood.edu"
+                  placeholder="name@greenwood.edu or 10-digit mobile"
                   placeholderTextColor={COLORS.slate[400]}
                   value={identifier}
-                  onChangeText={setIdentifier}
+                  onChangeText={(val) => {
+                    setIdentifier(val);
+                    if (errorMessage) setErrorMessage(null);
+                  }}
                   autoCapitalize="none"
                   keyboardType="email-address"
                 />
@@ -106,12 +201,12 @@ export default function LoginScreen() {
             {/* Password Input */}
             <View style={styles.inputGroup}>
               <View style={styles.passwordLabelRow}>
-                <Text style={styles.inputLabel}>PASSWORD / PIN</Text>
+                <Text style={styles.inputLabel}>SECURE PASSWORD / PIN</Text>
                 <TouchableOpacity
                   onPress={() =>
                     Alert.alert(
                       'Reset Password',
-                      'Please contact your School Administrative Office or use your registered email to reset your password.'
+                      'Please contact the Greenwood Administrative Office or use your registered institutional email to reset your credentials.'
                     )
                   }
                 >
@@ -125,7 +220,10 @@ export default function LoginScreen() {
                   placeholder="Enter your password"
                   placeholderTextColor={COLORS.slate[400]}
                   value={password}
-                  onChangeText={setPassword}
+                  onChangeText={(val) => {
+                    setPassword(val);
+                    if (errorMessage) setErrorMessage(null);
+                  }}
                   secureTextEntry={!showPassword}
                 />
                 <TouchableOpacity
@@ -143,40 +241,20 @@ export default function LoginScreen() {
 
             {/* Sign In CTA Button */}
             <TouchableOpacity
-              style={[styles.signInButton, SHADOWS.soft]}
+              style={[styles.signInButton, SHADOWS.soft, isLoading && styles.buttonDisabled]}
               onPress={handleSignIn}
               activeOpacity={0.85}
               disabled={isLoading}
             >
-              <Text style={styles.signInButtonText}>
-                {isLoading ? 'Verifying...' : 'Sign In to Portal'}
-              </Text>
-              <ArrowRight size={18} color="#FFFFFF" />
+              {isLoading ? (
+                <ActivityIndicator color="#FFFFFF" size="small" />
+              ) : (
+                <>
+                  <Text style={styles.signInButtonText}>Log in</Text>
+                  <ArrowRight size={18} color="#FFFFFF" />
+                </>
+              )}
             </TouchableOpacity>
-
-            {/* Instant 1-Tap Role Switcher for Testing */}
-            <View style={styles.quickRoleRow}>
-              <TouchableOpacity
-                onPress={() => router.replace('/(teacher)')}
-                style={styles.quickRoleBtn}
-              >
-                <Text style={styles.quickRoleBtnText}>👨‍🏫 Teacher / Coordinator</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                onPress={() => router.replace('/(parent)')}
-                style={styles.quickRoleBtn}
-              >
-                <Text style={styles.quickRoleBtnText}>👨‍👩‍👧 Parent Portal</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-
-          {/* Quick Demo Hint for Testing */}
-          <View style={styles.hintContainer}>
-            <Text style={styles.hintText}>
-              Testing Tip: Type <Text style={styles.hintBold}>teacher</Text> to open Faculty Portal, or enter any other text to open Parent Portal.
-            </Text>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -203,7 +281,7 @@ const styles = StyleSheet.create({
   // Brand Header
   brandSection: {
     alignItems: 'center',
-    marginBottom: 32,
+    marginBottom: 28,
   },
   crestBox: {
     width: 68,
@@ -226,7 +304,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: COLORS.slate[500],
     marginTop: 4,
-    fontWeight: '500',
+    fontWeight: '600',
   },
 
   // Form Card
@@ -238,16 +316,36 @@ const styles = StyleSheet.create({
     borderColor: COLORS.slate[200],
   },
   formTitle: {
-    fontSize: 18,
+    fontSize: 22,
     fontWeight: '800',
     color: COLORS.slate[900],
-    letterSpacing: -0.3,
+    letterSpacing: -0.4,
+    marginBottom: 20,
   },
   formSubtitle: {
     fontSize: 12,
     color: COLORS.slate[500],
     marginTop: 2,
-    marginBottom: 20,
+    marginBottom: 18,
+  },
+
+  errorBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: '#FEF2F2',
+    borderColor: '#FECACA',
+    borderWidth: 1,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 12,
+    marginBottom: 16,
+  },
+  errorText: {
+    fontSize: 12,
+    color: '#B91C1C',
+    fontWeight: '600',
+    flex: 1,
   },
 
   inputGroup: {
@@ -268,7 +366,7 @@ const styles = StyleSheet.create({
   },
   forgotLink: {
     fontSize: 11,
-    fontWeight: '600',
+    fontWeight: '700',
     color: COLORS.brand[600],
   },
   inputWrapper: {
@@ -303,47 +401,26 @@ const styles = StyleSheet.create({
     gap: 8,
     marginTop: 6,
   },
+  buttonDisabled: {
+    opacity: 0.7,
+  },
   signInButtonText: {
     fontSize: 15,
     fontWeight: '700',
     color: COLORS.white,
   },
 
-  quickRoleRow: {
-    flexDirection: 'row',
-    gap: 8,
-    marginTop: 14,
-    paddingTop: 12,
+  securityFooter: {
+    marginTop: 20,
+    paddingTop: 14,
     borderTopWidth: 1,
     borderTopColor: COLORS.slate[100],
-  },
-  quickRoleBtn: {
-    flex: 1,
-    backgroundColor: COLORS.slate[50],
-    paddingVertical: 10,
-    borderRadius: 10,
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: COLORS.slate[200],
   },
-  quickRoleBtnText: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: COLORS.slate[700],
-  },
-
-  hintContainer: {
-    marginTop: 24,
-    paddingHorizontal: 8,
-  },
-  hintText: {
+  securityNotice: {
     fontSize: 11,
     color: COLORS.slate[400],
     textAlign: 'center',
-    lineHeight: 16,
-  },
-  hintBold: {
-    color: COLORS.brand[600],
-    fontWeight: '700',
+    fontWeight: '500',
   },
 });

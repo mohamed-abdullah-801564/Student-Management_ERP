@@ -357,6 +357,14 @@ export default function StudentProfilePage() {
                     <span>Print Bonafide</span>
                   </button>
 
+                  <Link
+                    href="/office/promotion"
+                    className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-xs font-bold text-slate-700 shadow-xs transition-colors"
+                  >
+                    <FileCheck className="w-3.5 h-3.5 text-indigo-600" />
+                    <span>Issue TC / Promotion</span>
+                  </Link>
+
                   <a
                     href={`tel:${student.parent.emergency_contact}`}
                     className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-bold transition-colors"

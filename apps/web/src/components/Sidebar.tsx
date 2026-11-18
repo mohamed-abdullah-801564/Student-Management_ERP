@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
+import { supabase } from '@/lib/supabase';
 import {
   Shield,
   LayoutDashboard,
@@ -16,6 +17,7 @@ import {
   ChevronRight,
   Sparkles,
   Loader2,
+  CreditCard,
 } from 'lucide-react';
 
 export default function Sidebar() {
@@ -26,6 +28,18 @@ export default function Sidebar() {
   useEffect(() => {
     setNavigatingHref(null);
   }, [pathname]);
+
+  const handleSignOut = async () => {
+    // Clear session cookies
+    document.cookie = 'school_erp_session=; path=/; max-age=0; expires=Thu, 01 Jan 1970 00:00:00 GMT;';
+    document.cookie = 'school_erp_role=; path=/; max-age=0; expires=Thu, 01 Jan 1970 00:00:00 GMT;';
+    try {
+      await supabase.auth.signOut();
+    } catch {
+      // ignore
+    }
+    window.location.href = '/login';
+  };
 
   const navItems = [
     {
@@ -161,12 +175,15 @@ export default function Sidebar() {
         </div>
 
         <div className="flex items-center justify-between px-1">
-          <button className="flex items-center gap-1.5 text-[11px] font-semibold text-slate-500 hover:text-slate-800 py-1 px-2 rounded-lg hover:bg-slate-100 transition-colors">
+          <Link
+            href="/settings"
+            className="flex items-center gap-1.5 text-[11px] font-semibold text-slate-500 hover:text-slate-800 py-1 px-2 rounded-lg hover:bg-slate-100 transition-colors"
+          >
             <Settings className="w-3.5 h-3.5 text-slate-400" />
             <span>Settings</span>
-          </button>
+          </Link>
           <button
-            onClick={() => router.push('/login')}
+            onClick={handleSignOut}
             className="flex items-center gap-1.5 text-[11px] font-semibold text-rose-600 hover:text-rose-700 py-1 px-2 rounded-lg hover:bg-rose-50 transition-colors"
           >
             <LogOut className="w-3.5 h-3.5 text-rose-500" />

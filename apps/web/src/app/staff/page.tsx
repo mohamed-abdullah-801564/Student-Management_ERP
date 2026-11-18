@@ -44,6 +44,12 @@ export default function StaffDirectoryPage() {
   const [selectedRole, setSelectedRole] = useState<'all' | 'coordinator' | 'incharge' | 'teacher' | 'admission_officer'>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [staffHandoverSlip, setStaffHandoverSlip] = useState<{
+    name: string;
+    email: string;
+    role: string;
+    tempPassword: string;
+  } | null>(null);
 
   // New Staff / Admin Form State
   const [newName, setNewName] = useState('');
@@ -195,6 +201,10 @@ export default function StaffDirectoryPage() {
     e.preventDefault();
     if (!newName.trim()) return;
 
+    const finalEmail = newEmail.trim() || `${newName.toLowerCase().replace(/\s+/g, '.')}@greenwood.edu`;
+    const finalPhone = newPhone.trim() || '+91 98401 00000';
+    const generatedTemp = `Faculty#${Math.floor(1000 + Math.random() * 9000)}!`;
+
     const newMember: StaffMember = {
       id: `fac_${Date.now()}`,
       name: newName,
@@ -204,8 +214,8 @@ export default function StaffDirectoryPage() {
       inCharge: newInCharge !== 'None' ? newInCharge : undefined,
       periodsPerWeek: newRole === 'admission_officer' ? 0 : 22,
       status: 'present',
-      email: newEmail || `${newName.toLowerCase().replace(/\s+/g, '.')}@greenwood.edu`,
-      phone: newPhone || '+91 98401 00000',
+      email: finalEmail,
+      phone: finalPhone,
       permissions: newPermissions,
     };
 
@@ -216,14 +226,21 @@ export default function StaffDirectoryPage() {
         id: crypto.randomUUID(),
         school_id: '11111111-1111-1111-1111-111111111111',
         full_name: newName,
-        email: newEmail,
-        phone: newPhone,
-        role: newRole,
+        email: finalEmail,
+        phone: finalPhone,
+        role: (newRole === 'admission_officer' ? 'principal' : 'teacher') as any,
         designation: newDesignation,
       });
     } catch (err) {
       console.warn('Supabase profile note:', err);
     }
+
+    setStaffHandoverSlip({
+      name: newName,
+      email: finalEmail,
+      role: newDesignation,
+      tempPassword: generatedTemp,
+    });
 
     setNewName('');
     setNewEmpId('');
@@ -680,6 +697,81 @@ export default function StaffDirectoryPage() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+      {/* STAFF CREDENTIALS HANDOVER SLIP MODAL */}
+      {staffHandoverSlip && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in">
+          <div className="bg-white rounded-3xl max-w-md w-full border border-slate-200 shadow-2xl p-7 space-y-4">
+            <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-indigo-600 text-white flex items-center justify-center font-bold">
+                  <ShieldCheck className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-extrabold text-slate-900 text-sm">
+                    Staff Account Provisioned
+                  </h3>
+                  <p className="text-[10px] text-slate-500">
+                    Official Login & Temporary Credentials Handover
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setStaffHandoverSlip(null)}
+                className="p-1 rounded-lg text-slate-400 hover:text-slate-600"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="bg-slate-50 border border-slate-200/80 rounded-2xl p-4 space-y-2.5 text-xs">
+              <div className="flex justify-between">
+                <span className="text-slate-500">Staff Name:</span>
+                <span className="font-bold text-slate-900">{staffHandoverSlip.name}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-500">Role / Designation:</span>
+                <span className="font-bold text-indigo-700">{staffHandoverSlip.role}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-500">Official Login Email:</span>
+                <span className="font-mono font-bold text-slate-800">{staffHandoverSlip.email}</span>
+              </div>
+              <div className="flex justify-between pt-1 border-t border-slate-200/60">
+                <span className="text-slate-500">Temporary Password:</span>
+                <span className="font-mono font-extrabold text-indigo-700 bg-white px-2 py-0.5 rounded border border-indigo-200">
+                  {staffHandoverSlip.tempPassword}
+                </span>
+              </div>
+            </div>
+
+            <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-[11px] text-amber-800">
+              The staff member will be required to set their permanent password upon their initial sign-in to the ERP portal.
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => {
+                  navigator.clipboard?.writeText(
+                    `Staff: ${staffHandoverSlip.name}\nEmail: ${staffHandoverSlip.email}\nTemporary Password: ${staffHandoverSlip.tempPassword}\nPortal: ${window.location.origin}/login`
+                  );
+                  alert('Staff credentials copied to clipboard!');
+                }}
+                className="px-4 py-2 rounded-xl border border-slate-200 text-slate-700 font-bold text-xs hover:bg-slate-50"
+              >
+                Copy Credentials
+              </button>
+              <button
+                type="button"
+                onClick={() => setStaffHandoverSlip(null)}
+                className="px-5 py-2 rounded-xl bg-indigo-600 text-white font-bold text-xs hover:bg-indigo-700 shadow-xs"
+              >
+                Done
+              </button>
+            </div>
           </div>
         </div>
       )}

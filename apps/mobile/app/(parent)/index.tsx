@@ -290,7 +290,7 @@ export default function ParentHomeScreen() {
           {/* Button 2: Class Diary */}
           <TouchableOpacity
             style={styles.circleActionItem}
-            onPress={() => setIsDiaryModalVisible(true)}
+            onPress={() => navigateTo('diary', '/(parent)/diary')}
             activeOpacity={0.75}
           >
             <View style={[styles.circleButton, { backgroundColor: '#EEF2FF' }]}>
@@ -302,7 +302,7 @@ export default function ParentHomeScreen() {
           {/* Button 3: Homework */}
           <TouchableOpacity
             style={styles.circleActionItem}
-            onPress={() => setIsHomeworkModalVisible(true)}
+            onPress={() => navigateTo('homework', '/(parent)/homework')}
             activeOpacity={0.75}
           >
             <View style={[styles.circleButton, { backgroundColor: '#EFF6FF' }]}>
@@ -336,7 +336,7 @@ export default function ParentHomeScreen() {
           {/* Button 5: Subject Teachers */}
           <TouchableOpacity
             style={styles.circleActionItem}
-            onPress={() => setIsTeachersModalVisible(true)}
+            onPress={() => navigateTo('teachers', '/(parent)/teachers')}
             activeOpacity={0.75}
           >
             <View style={[styles.circleButton, { backgroundColor: '#F0F9FF' }]}>
@@ -360,7 +360,7 @@ export default function ParentHomeScreen() {
           {/* Button 7: Timetable */}
           <TouchableOpacity
             style={styles.circleActionItem}
-            onPress={() => setIsDiaryModalVisible(true)}
+            onPress={() => navigateTo('timetable', '/(parent)/timetable')}
             activeOpacity={0.75}
           >
             <View style={[styles.circleButton, { backgroundColor: '#F3E8FF' }]}>
@@ -372,196 +372,19 @@ export default function ParentHomeScreen() {
           {/* Button 8: Fee Desk */}
           <TouchableOpacity
             style={styles.circleActionItem}
-            onPress={() => {
-              Alert.alert(
-                'Fee Accounts Desk',
-                'Term 1 Academic Tuition Fees (₹28,500) fully cleared.\nReceipt #REC-2026-0891 digitally verified.',
-                [{ text: 'OK' }]
-              );
-            }}
+            onPress={() => navigateTo('fees', '/(parent)/fees')}
             activeOpacity={0.75}
           >
             <View style={[styles.circleButton, { backgroundColor: '#F0FDFA' }]}>
               <CreditCard size={22} color="#0D9488" strokeWidth={2.2} />
+              <View style={[styles.circleBadge, { backgroundColor: '#EA580C' }]}>
+                <Text style={styles.circleBadgeText}>Due</Text>
+              </View>
             </View>
             <Text style={styles.circleActionLabel}>Fee Desk</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
-
-      {/* TODAY'S CLASS DIARY MODAL (Clean React Native Views - No <div>) */}
-      <Modal
-        visible={isDiaryModalVisible}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setIsDiaryModalVisible(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={[styles.modalSheet, SHADOWS.soft]}>
-            <View style={styles.modalHeader}>
-              <View>
-                <Text style={styles.modalTitle}>Today's Class Diary</Text>
-                <Text style={styles.modalSubtitle}>Class 8-B • 4 Periods Completed</Text>
-              </View>
-              <TouchableOpacity
-                onPress={() => setIsDiaryModalVisible(false)}
-                style={styles.modalCloseBtn}
-              >
-                <X size={20} color={COLORS.slate[600]} />
-              </TouchableOpacity>
-            </View>
-
-            <ScrollView style={{ maxHeight: 420 }} showsVerticalScrollIndicator={false}>
-              {MOCK_PARENT_DIARY.map((period) => (
-                <View key={period.id} style={[styles.diaryItemCard, SHADOWS.card]}>
-                  <View style={styles.diaryItemTop}>
-                    <View style={styles.periodBadge}>
-                      <Text style={styles.periodBadgeText}>Period {period.periodNo}</Text>
-                    </View>
-                    <Text style={styles.periodTimeText}>{period.timing}</Text>
-                  </View>
-                  <Text style={styles.diarySubjectName}>{period.subject}</Text>
-                  <Text style={styles.diaryTeacherName}>
-                    By {period.teacher} • {period.room}
-                  </Text>
-                  <View style={styles.topicBox}>
-                    <Text style={styles.topicLabel}>TOPIC COVERED</Text>
-                    <Text style={styles.topicContentText}>{period.topicTaught}</Text>
-                  </View>
-                </View>
-              ))}
-            </ScrollView>
-          </View>
-        </View>
-      </Modal>
-
-      {/* HOMEWORK CHECKLIST MODAL (Clean React Native Views - No <div>) */}
-      <Modal
-        visible={isHomeworkModalVisible}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setIsHomeworkModalVisible(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={[styles.modalSheet, SHADOWS.soft]}>
-            <View style={styles.modalHeader}>
-              <View>
-                <Text style={styles.modalTitle}>Verified Homework Tasks</Text>
-                <Text style={styles.modalSubtitle}>Class 8-B • Tap to mark as completed</Text>
-              </View>
-              <TouchableOpacity
-                onPress={() => setIsHomeworkModalVisible(false)}
-                style={styles.modalCloseBtn}
-              >
-                <X size={20} color={COLORS.slate[600]} />
-              </TouchableOpacity>
-            </View>
-
-            <ScrollView style={{ maxHeight: 440 }} showsVerticalScrollIndicator={false}>
-              {homeworkList.map((hw) => (
-                <TouchableOpacity
-                  key={hw.id}
-                  style={[
-                    styles.homeworkCard,
-                    hw.isCompleted && styles.homeworkCardCompleted,
-                    SHADOWS.card,
-                  ]}
-                  onPress={() => toggleHomework(hw.id)}
-                  activeOpacity={0.7}
-                >
-                  <View style={styles.hwCheckboxWrap}>
-                    {hw.isCompleted ? (
-                      <CheckSquare size={22} color={COLORS.present} />
-                    ) : (
-                      <Square size={22} color={COLORS.slate[400]} />
-                    )}
-                  </View>
-
-                  <View style={{ flex: 1 }}>
-                    <View style={styles.hwTopRow}>
-                      <View style={styles.hwSubjectBadge}>
-                        <Text style={styles.hwSubjectText}>{hw.subject}</Text>
-                      </View>
-                      <Text style={styles.hwDueDate}>Due: {hw.dueDate}</Text>
-                    </View>
-
-                    <Text style={styles.hwTitleText}>{hw.title}</Text>
-                    <Text style={styles.hwInstructionsText}>{hw.instructions}</Text>
-
-                    {hw.hasAttachment && (
-                      <View style={styles.attachmentPill}>
-                        <Paperclip size={12} color={COLORS.brand[600]} />
-                        <Text style={styles.attachmentPillText}>
-                          Blackboard Photo Attached
-                        </Text>
-                      </View>
-                    )}
-                  </View>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-          </View>
-        </View>
-      </Modal>
-
-      {/* SUBJECT FACULTY MODAL (Class 8-B Teachers) */}
-      <Modal
-        visible={isTeachersModalVisible}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setIsTeachersModalVisible(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={[styles.modalSheet, SHADOWS.soft]}>
-            <View style={styles.modalHeader}>
-              <View>
-                <Text style={styles.modalTitle}>Class 8-B Subject Faculty</Text>
-                <Text style={styles.modalSubtitle}>Faculty members assigned to Rahul Suresh</Text>
-              </View>
-              <TouchableOpacity
-                onPress={() => setIsTeachersModalVisible(false)}
-                style={styles.modalCloseBtn}
-              >
-                <X size={20} color={COLORS.slate[600]} />
-              </TouchableOpacity>
-            </View>
-
-            <ScrollView style={{ maxHeight: 420 }} showsVerticalScrollIndicator={false}>
-              {CLASS_8B_TEACHERS.map((teacher) => (
-                <View key={teacher.id} style={[styles.teacherItemCard, SHADOWS.card]}>
-                  <View style={styles.teacherAvatarCircle}>
-                    <Text style={styles.teacherAvatarText}>{teacher.initials}</Text>
-                  </View>
-
-                  <View style={{ flex: 1 }}>
-                    <View style={styles.teacherNameRow}>
-                      <Text style={styles.teacherName}>{teacher.name}</Text>
-                      {teacher.isClassTeacher && (
-                        <View style={styles.classTeacherBadge}>
-                          <Text style={styles.classTeacherBadgeText}>Class Teacher</Text>
-                        </View>
-                      )}
-                    </View>
-                    <Text style={styles.teacherSubject}>{teacher.subject}</Text>
-                    <Text style={styles.teacherExperience}>{teacher.designation}</Text>
-                  </View>
-
-                  <TouchableOpacity
-                    style={styles.teacherChatBtn}
-                    onPress={() => {
-                      setIsTeachersModalVisible(false);
-                      navigateTo('chat', '/(parent)/chat');
-                    }}
-                    activeOpacity={0.7}
-                  >
-                    <MessageSquare size={16} color={COLORS.brand[600]} />
-                  </TouchableOpacity>
-                </View>
-              ))}
-            </ScrollView>
-          </View>
-        </View>
-      </Modal>
     </SafeAreaView>
   );
 }

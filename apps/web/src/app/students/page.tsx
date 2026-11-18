@@ -1,10 +1,11 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Sidebar from '@/components/Sidebar';
 import Header from '@/components/Header';
 import { NumberTicker } from '@/components/ui/number-ticker';
+import { supabase } from '@/lib/supabase';
 import {
   GraduationCap,
   Users,
@@ -20,6 +21,7 @@ import {
   AlertCircle,
   ChevronRight,
   ShieldCheck,
+  RefreshCw,
 } from 'lucide-react';
 
 interface StudentRecord {
@@ -162,11 +164,50 @@ const MOCK_STUDENTS_LIST: StudentRecord[] = [
 ];
 
 export default function StudentsDirectoryPage() {
+  const [students, setStudents] = useState<StudentRecord[]>(MOCK_STUDENTS_LIST);
+  const [loadingDb, setLoadingDb] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedClass, setSelectedClass] = useState('ALL');
   const [selectedFeeFilter, setSelectedFeeFilter] = useState('ALL');
 
-  const filteredStudents = MOCK_STUDENTS_LIST.filter((student) => {
+  useEffect(() => {
+    async function loadStudentsFromSupabase() {
+      try {
+        setLoadingDb(true);
+        const { data, error } = await supabase
+          .from('students')
+          .select('*')
+          .order('created_at', { ascending: false });
+
+        if (!error && data && data.length > 0) {
+          const mapped: StudentRecord[] = data.map((st: any, idx: number) => ({
+            id: st.id,
+            admissionNo: st.admission_no || `GW-2026-${st.roll_no || idx + 1}`,
+            rollNo: st.roll_no ? `8B${st.roll_no}` : '8B01',
+            name: `${st.first_name || ''} ${st.last_name || ''}`.trim() || 'Student Scholar',
+            className: 'Class 8',
+            section: 'B',
+            gender: st.gender === 'Female' ? 'Female' : 'Male',
+            parentName: 'Parent / Guardian',
+            parentPhone: '+91 98401 00000',
+            feeStatus: (st.fee_status === 'Cleared' || st.fee_status === 'Paid') ? 'Paid' : 'Pending',
+            attendanceRate: 96.0,
+            initials: `${(st.first_name || 'S')[0]}${(st.last_name || 'S')[0]}`,
+            avatarBg: idx % 2 === 0 ? 'bg-indigo-100 text-indigo-700' : 'bg-emerald-100 text-emerald-800',
+          }));
+          setStudents(mapped);
+        }
+      } catch (err) {
+        console.log('Using default mock student roster:', err);
+      } finally {
+        setLoadingDb(false);
+      }
+    }
+
+    loadStudentsFromSupabase();
+  }, []);
+
+  const filteredStudents = students.filter((student) => {
     const matchesSearch =
       student.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       student.admissionNo.toLowerCase().includes(searchQuery.toLowerCase()) ||
