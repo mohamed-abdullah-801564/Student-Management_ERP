@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -31,6 +31,7 @@ import {
 } from 'lucide-react-native';
 import { COLORS, SHADOWS } from '../../src/constants/theme';
 import { AnimatedNumberTicker } from '../../src/components/AnimatedNumberTicker';
+import { supabase } from '../../src/lib/supabase';
 
 interface Installment {
   id: string;
@@ -97,6 +98,52 @@ export default function ParentFeesScreen() {
       ],
     },
   ]);
+
+  // Sync real-time fee invoice status from Supabase
+  useEffect(() => {
+    async function loadFeesFromSupabase() {
+      try {
+        const { data, error } = await supabase
+          .from('fee_invoices')
+          .select('*')
+          .eq('student_id', '44444444-4444-4444-4444-000000000001')
+          .order('payment_date', { ascending: false });
+
+        if (data && data.length > 0) {
+          setInstallments((prev) =>
+            prev.map((inst) => {
+              const matched = data.find((d: any) =>
+                (d.term && inst.termTitle.toLowerCase().includes(d.term.toLowerCase())) ||
+                (d.fee_title && inst.termTitle.toLowerCase().includes(d.fee_title.toLowerCase()))
+              );
+              if (matched) {
+                const isPaid = matched.status === 'Paid' || matched.paid_amount >= matched.amount;
+                return {
+                  ...inst,
+                  amount: matched.amount || inst.amount,
+                  status: isPaid ? 'paid' : (inst.status as any),
+                  receiptNo: matched.receipt_no || inst.receiptNo,
+                  paidDate: matched.payment_date
+                    ? new Date(matched.payment_date).toLocaleDateString('en-IN', {
+                        day: '2-digit',
+                        month: 'short',
+                        year: 'numeric',
+                      })
+                    : inst.paidDate,
+                  paymentMode: matched.payment_mode || inst.paymentMode,
+                };
+              }
+              return inst;
+            })
+          );
+        }
+      } catch (err) {
+        console.error('Failed to load student fees from Supabase:', err);
+      }
+    }
+
+    loadFeesFromSupabase();
+  }, []);
 
   const totalAnnual = installments.reduce((acc, curr) => acc + curr.amount, 0);
   const totalPaid = installments

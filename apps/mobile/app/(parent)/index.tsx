@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   Modal,
   Alert,
+  Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useNavigation } from 'expo-router';
@@ -26,6 +27,10 @@ import {
   Users,
   Clock,
   CreditCard,
+  AlertTriangle,
+  Megaphone,
+  Eye,
+  ShieldCheck,
 } from 'lucide-react-native';
 import { COLORS, SHADOWS } from '../../src/constants/theme';
 import {
@@ -35,6 +40,8 @@ import {
   ParentHomeworkItem,
 } from '../../src/constants/mockData';
 import { AnimatedNumberTicker } from '../../src/components/AnimatedNumberTicker';
+import { supabase } from '../../src/lib/supabase';
+import { schoolStore, SchoolCircular } from '../../src/lib/schoolStore';
 
 const CLASS_8B_TEACHERS = [
   {
@@ -94,6 +101,37 @@ export default function ParentHomeScreen() {
   const [isHomeworkModalVisible, setIsHomeworkModalVisible] = useState(false);
   const [isTeachersModalVisible, setIsTeachersModalVisible] = useState(false);
   const [homeworkList, setHomeworkList] = useState<ParentHomeworkItem[]>(MOCK_PARENT_HOMEWORK);
+  const [todayAttendanceStatus, setTodayAttendanceStatus] = useState<'P' | 'A' | 'L' | 'pending'>('P');
+  const [circulars, setCirculars] = useState<SchoolCircular[]>(schoolStore.getCirculars('parents'));
+  const [selectedCircularImage, setSelectedCircularImage] = useState<{ url: string; title: string } | null>(null);
+
+  useEffect(() => {
+    const unsub = schoolStore.subscribe(() => {
+      setCirculars(schoolStore.getCirculars('parents'));
+    });
+    return unsub;
+  }, []);
+
+  // Load real-time attendance status from Supabase
+  useEffect(() => {
+    async function checkTodayAttendance() {
+      try {
+        const { data, error } = await supabase
+          .from('attendance_records')
+          .select('status, created_at')
+          .eq('student_id', '44444444-4444-4444-4444-000000000001')
+          .order('created_at', { ascending: false })
+          .limit(1);
+
+        if (data && data.length > 0) {
+          setTodayAttendanceStatus(data[0].status as any);
+        }
+      } catch (err) {
+        console.error('Failed to load today attendance for parent:', err);
+      }
+    }
+    checkTodayAttendance();
+  }, []);
 
   const toggleHomework = (id: string) => {
     setHomeworkList((prev) =>
@@ -138,17 +176,44 @@ export default function ParentHomeScreen() {
         </View>
 
         {/* CARD 1: TODAY'S ATTENDANCE */}
-        <View style={[styles.attendanceCard, SHADOWS.card]}>
+        <View
+          style={[
+            styles.attendanceCard,
+            SHADOWS.card,
+            todayAttendanceStatus === 'A' && {
+              borderColor: '#FCA5A5',
+              backgroundColor: '#FEF2F2',
+            },
+          ]}
+        >
           <View style={styles.attendanceLeft}>
-            <View style={styles.attendanceIconWrap}>
-              <CheckCircle2 size={24} color={COLORS.present} strokeWidth={2.4} />
+            <View
+              style={[
+                styles.attendanceIconWrap,
+                todayAttendanceStatus === 'A' && { backgroundColor: '#FEE2E2' },
+              ]}
+            >
+              {todayAttendanceStatus === 'A' ? (
+                <AlertTriangle size={24} color="#DC2626" strokeWidth={2.4} />
+              ) : (
+                <CheckCircle2 size={24} color={COLORS.present} strokeWidth={2.4} />
+              )}
             </View>
             <View style={styles.attendanceTextWrap}>
-              <Text style={styles.attendanceTitle}>
-                Class 8-B • Present Today
+              <Text
+                style={[
+                  styles.attendanceTitle,
+                  todayAttendanceStatus === 'A' && { color: '#DC2626', fontWeight: '800' },
+                ]}
+              >
+                {todayAttendanceStatus === 'A'
+                  ? 'Marked Absent Today (Morning Roll Call)'
+                  : 'Class 8-B • Present Today'}
               </Text>
               <Text style={styles.attendanceTimestamp}>
-                Marked by Class In-Charge Mrs. Deepa at 08:42 AM
+                {todayAttendanceStatus === 'A'
+                  ? 'Please contact Form Tutor Mrs. Deepa if this is an error.'
+                  : 'Marked by Class In-Charge Mrs. Deepa at 08:42 AM'}
               </Text>
             </View>
           </View>
@@ -384,7 +449,121 @@ export default function ParentHomeScreen() {
             <Text style={styles.circleActionLabel}>Fee Desk</Text>
           </TouchableOpacity>
         </View>
+
+        {/* SECTION: OFFICIAL SCHOOL CIRCULARS & NOTICES */}
+        <View style={styles.circularSectionHeader}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <Megaphone size={18} color={COLORS.brand[700]} />
+            <Text style={styles.sectionTitle}>School Circulars & Advisories</Text>
+          </View>
+          <Text style={styles.circularSectionSub}>
+            Official broadcasts signed by Principal Dr. K. Arumugam
+          </Text>
+        </View>
+
+        <View style={styles.circularList}>
+          {circulars.map((cir) => {
+            const isUrgent = cir.priority === 'urgent';
+            return (
+              <View key={cir.id} style={[styles.circularCard, SHADOWS.card]}>
+                <View style={styles.circularCardTop}>
+                  <View
+                    style={[
+                      styles.circularPriorityBadge,
+                      isUrgent
+                        ? styles.circularPriorityUrgent
+                        : styles.circularPriorityNormal,
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.circularPriorityText,
+                        isUrgent
+                          ? styles.circularPriorityTextUrgent
+                          : styles.circularPriorityTextNormal,
+                      ]}
+                    >
+                      {isUrgent ? '⚠️ URGENT ADVISORY' : 'OFFICIAL CIRCULAR'}
+                    </Text>
+                  </View>
+                  <Text style={styles.circularDateText}>
+                    {cir.memoNo} • {cir.date}
+                  </Text>
+                </View>
+
+                <Text style={styles.circularTitleText}>{cir.title}</Text>
+                <Text style={styles.circularBodyText}>{cir.content}</Text>
+
+                {cir.attachmentUrl && (
+                  <TouchableOpacity
+                    style={styles.circularAttachmentBox}
+                    onPress={() =>
+                      setSelectedCircularImage({
+                        url: cir.attachmentUrl!,
+                        title: cir.title,
+                      })
+                    }
+                    activeOpacity={0.85}
+                  >
+                    <Image
+                      source={{ uri: cir.attachmentUrl }}
+                      style={styles.circularAttachmentThumb}
+                    />
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.circularAttachmentName} numberOfLines={1}>
+                        {cir.attachmentName || 'Circular Attachment Document'}
+                      </Text>
+                      <Text style={styles.circularAttachmentAction}>
+                        Tap to view full announcement photo / map
+                      </Text>
+                    </View>
+                    <Eye size={16} color={COLORS.brand[600]} />
+                  </TouchableOpacity>
+                )}
+
+                <View style={styles.circularFooter}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                    <ShieldCheck size={14} color={COLORS.presentText} />
+                    <Text style={styles.circularAuthorText}>{cir.author}</Text>
+                  </View>
+                </View>
+              </View>
+            );
+          })}
+        </View>
       </ScrollView>
+
+      {/* FULL-SIZE CIRCULAR ATTACHMENT MODAL */}
+      <Modal
+        visible={!!selectedCircularImage}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setSelectedCircularImage(null)}
+      >
+        <View style={styles.circularModalOverlay}>
+          <View style={styles.circularModalContent}>
+            <View style={styles.circularModalHeader}>
+              <Text style={styles.circularModalTitle} numberOfLines={1}>
+                {selectedCircularImage?.title}
+              </Text>
+              <TouchableOpacity
+                onPress={() => setSelectedCircularImage(null)}
+                style={styles.circularModalCloseBtn}
+              >
+                <X size={20} color={COLORS.white} />
+              </TouchableOpacity>
+            </View>
+
+            {selectedCircularImage?.url && (
+              <Image
+                source={{ uri: selectedCircularImage.url }}
+                style={styles.circularModalImage}
+                resizeMode="contain"
+              />
+            )}
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -960,5 +1139,158 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.brand[50],
     alignItems: 'center',
     justifyContent: 'center',
+  },
+
+  // Circulars & Notices Styles
+  circularSectionHeader: {
+    marginTop: 24,
+    marginBottom: 12,
+  },
+  circularSectionSub: {
+    fontSize: 12,
+    color: COLORS.slate[500],
+    marginTop: 2,
+    fontWeight: '500',
+  },
+  circularList: {
+    gap: 14,
+  },
+  circularCard: {
+    backgroundColor: COLORS.white,
+    borderRadius: 18,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: COLORS.slate[200],
+  },
+  circularCardTop: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  circularPriorityBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+  },
+  circularPriorityUrgent: {
+    backgroundColor: '#FEE2E2',
+  },
+  circularPriorityNormal: {
+    backgroundColor: '#EEF2FF',
+  },
+  circularPriorityText: {
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 0.5,
+  },
+  circularPriorityTextUrgent: {
+    color: '#DC2626',
+  },
+  circularPriorityTextNormal: {
+    color: COLORS.brand[700],
+  },
+  circularDateText: {
+    fontSize: 11,
+    color: COLORS.slate[500],
+    fontWeight: '500',
+  },
+  circularTitleText: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: COLORS.slate[900],
+    lineHeight: 20,
+    marginBottom: 6,
+  },
+  circularBodyText: {
+    fontSize: 13,
+    color: COLORS.slate[600],
+    lineHeight: 19,
+    marginBottom: 12,
+  },
+  circularAttachmentBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    backgroundColor: COLORS.brand[50],
+    borderRadius: 12,
+    padding: 10,
+    borderWidth: 1,
+    borderColor: COLORS.brand[100],
+    marginBottom: 12,
+  },
+  circularAttachmentThumb: {
+    width: 44,
+    height: 44,
+    borderRadius: 8,
+    backgroundColor: COLORS.slate[200],
+  },
+  circularAttachmentName: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: COLORS.brand[900],
+  },
+  circularAttachmentAction: {
+    fontSize: 11,
+    color: COLORS.brand[600],
+    marginTop: 2,
+  },
+  circularFooter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.slate[100],
+  },
+  circularAuthorText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: COLORS.slate[700],
+  },
+
+  // Modal Full Image
+  circularModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(15, 23, 42, 0.85)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 16,
+  },
+  circularModalContent: {
+    width: '100%',
+    maxHeight: '85%',
+    backgroundColor: COLORS.slate[900],
+    borderRadius: 20,
+    overflow: 'hidden',
+  },
+  circularModalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255,255,255,0.1)',
+  },
+  circularModalTitle: {
+    flex: 1,
+    color: COLORS.white,
+    fontSize: 14,
+    fontWeight: '700',
+    marginRight: 12,
+  },
+  circularModalCloseBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  circularModalImage: {
+    width: '100%',
+    height: 380,
+    backgroundColor: '#000000',
   },
 });

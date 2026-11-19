@@ -7,6 +7,8 @@ import {
   TouchableOpacity,
   Dimensions,
   Alert,
+  Image,
+  Modal,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useNavigation } from 'expo-router';
@@ -31,10 +33,13 @@ import {
   Plus,
   Info,
   ArrowRight,
+  Megaphone,
+  Eye,
 } from 'lucide-react-native';
 import { COLORS, SHADOWS } from '../../src/constants/theme';
 import { MOCK_SCHEDULE, SchedulePeriod } from '../../src/constants/mockData';
 import { AnimatedNumberTicker } from '../../src/components/AnimatedNumberTicker';
+import { schoolStore, SubstitutionRecord, SchoolCircular } from '../../src/lib/schoolStore';
 
 export default function TeacherDashboard() {
   const router = useRouter();
@@ -48,6 +53,22 @@ export default function TeacherDashboard() {
 
   // Interactive state for Coordinator Approvals
   const [approvedRequests, setApprovedRequests] = useState<string[]>([]);
+  const [substitutions, setSubstitutions] = useState<SubstitutionRecord[]>(schoolStore.getSubstitutions());
+  const [facultyPhoto, setFacultyPhoto] = useState<string | null>(schoolStore.getFacultyPhoto());
+  const [isCircularModalVisible, setIsCircularModalVisible] = useState(false);
+  const [teacherCirculars, setTeacherCirculars] = useState<SchoolCircular[]>(schoolStore.getCirculars('teachers'));
+  const [selectedCircularImage, setSelectedCircularImage] = useState<{ url: string; title: string } | null>(null);
+
+  React.useEffect(() => {
+    const unsub = schoolStore.subscribe(() => {
+      setSubstitutions(schoolStore.getSubstitutions());
+      setFacultyPhoto(schoolStore.getFacultyPhoto());
+      setTeacherCirculars(schoolStore.getCirculars('teachers'));
+    });
+    return unsub;
+  }, []);
+
+  const p3Sub = substitutions.find((s) => s.id === 'sub-p3');
 
   const navigateTo = (screenName: string, path: string) => {
     try {
@@ -95,11 +116,18 @@ export default function TeacherDashboard() {
             </View>
           </View>
 
-          {/* Coordinator Profile Photo */}
+          {/* Faculty / Coordinator Profile Photo */}
           <View style={styles.teacherPhotoWrapper}>
-            <View style={styles.teacherPhotoCircle}>
-              <Text style={styles.teacherPhotoInitials}>SR</Text>
-            </View>
+            {facultyPhoto ? (
+              <Image
+                source={{ uri: facultyPhoto }}
+                style={styles.teacherPhotoCircle}
+              />
+            ) : (
+              <View style={styles.teacherPhotoCircle}>
+                <Text style={styles.teacherPhotoInitials}>DR</Text>
+              </View>
+            )}
             <View style={styles.onlineStatusDot} />
           </View>
         </View>
@@ -222,12 +250,103 @@ export default function TeacherDashboard() {
               </View>
             </View>
 
-            {/* CAMPUS NOTE TICKER BANNER (Placed BEFORE Quick Actions) */}
-            <View style={styles.campusNoteBanner}>
-              <Info size={18} color="#4F46E5" strokeWidth={2.2} />
-              <Text style={styles.campusNoteText}>
-                CBSE Pre-Board moderation meeting scheduled for 3:30 PM in AV Room 2.
-              </Text>
+            {/* UNIFIED COORDINATOR OPERATIONS CARD (Clean, Professional, Zero AI Slop) */}
+            <View style={[styles.coordinatorOpsCard, SHADOWS.card]}>
+              {/* Row 1: Period 3 Substitution Status */}
+              <TouchableOpacity
+                style={styles.opsCardRow}
+                onPress={() => navigateTo('substitute', '/(teacher)/substitute')}
+                activeOpacity={0.75}
+              >
+                <View style={styles.opsRowLeft}>
+                  <View
+                    style={[
+                      styles.opsStatusIconCircle,
+                      {
+                        backgroundColor:
+                          p3Sub?.status === 'allocated' ? '#ECFDF5' : '#FFF1F2',
+                      },
+                    ]}
+                  >
+                    {p3Sub?.status === 'allocated' ? (
+                      <CheckCircle2 size={16} color="#059669" strokeWidth={2.2} />
+                    ) : (
+                      <AlertCircle size={16} color="#E11D48" strokeWidth={2.2} />
+                    )}
+                  </View>
+                  <View style={{ flex: 1, marginRight: 8 }}>
+                    <View style={styles.opsLabelRow}>
+                      <Text style={styles.opsItemTitle}>Period 3 Physics Coverage</Text>
+                      <View
+                        style={[
+                          styles.opsStatusBadge,
+                          {
+                            backgroundColor:
+                              p3Sub?.status === 'allocated' ? '#ECFDF5' : '#FFF1F2',
+                          },
+                        ]}
+                      >
+                        <Text
+                          style={[
+                            styles.opsStatusBadgeText,
+                            {
+                              color:
+                                p3Sub?.status === 'allocated' ? '#059669' : '#E11D48',
+                            },
+                          ]}
+                        >
+                          {p3Sub?.status === 'allocated' ? 'Allocated ✓' : 'Action Needed'}
+                        </Text>
+                      </View>
+                    </View>
+                    <Text style={styles.opsItemSub}>
+                      {p3Sub?.status === 'allocated'
+                        ? `Covered by ${p3Sub.assignedFaculty} • Room 302`
+                        : 'Mr. Rajesh on Medical Leave • Tap to assign substitute'}
+                    </Text>
+                  </View>
+                </View>
+                <ChevronRight size={16} color="#94A3B8" />
+              </TouchableOpacity>
+
+              <View style={styles.opsDivider} />
+
+              {/* Row 2: Campus Faculty Meeting */}
+              <View style={styles.opsCardRow}>
+                <View style={styles.opsRowLeft}>
+                  <View
+                    style={[
+                      styles.opsStatusIconCircle,
+                      { backgroundColor: '#EEF2FF' },
+                    ]}
+                  >
+                    <Info size={16} color="#4F46E5" strokeWidth={2.2} />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <View style={styles.opsLabelRow}>
+                      <Text style={styles.opsItemTitle}>Faculty Moderation Brief</Text>
+                      <View
+                        style={[
+                          styles.opsStatusBadge,
+                          { backgroundColor: '#EEF2FF' },
+                        ]}
+                      >
+                        <Text
+                          style={[
+                            styles.opsStatusBadgeText,
+                            { color: '#4F46E5' },
+                          ]}
+                        >
+                          3:30 PM Today
+                        </Text>
+                      </View>
+                    </View>
+                    <Text style={styles.opsItemSub}>
+                      CBSE Pre-Board moderation meeting in AV Room 2
+                    </Text>
+                  </View>
+                </View>
+              </View>
             </View>
 
             {/* CIRCULAR DUTY ACTION BUTTONS (Placed at the Bottom) */}
@@ -270,17 +389,18 @@ export default function TeacherDashboard() {
               {/* Button 3: Wing Broadcast Notice */}
               <TouchableOpacity
                 style={styles.circleActionItem}
-                onPress={() => {
-                  Alert.alert(
-                    'Wing Broadcast',
-                    'Circular notice drafted for all Middle & Senior School Faculty.',
-                    [{ text: 'OK' }]
-                  );
-                }}
+                onPress={() => setIsCircularModalVisible(true)}
                 activeOpacity={0.75}
               >
                 <View style={[styles.circleButton, { backgroundColor: '#FFFBEB' }]}>
                   <Bell size={22} color="#D97706" strokeWidth={2.2} />
+                  {teacherCirculars.filter((c) => c.priority === 'urgent').length > 0 && (
+                    <View style={styles.urgentBadgeCount}>
+                      <Text style={styles.urgentBadgeCountText}>
+                        {teacherCirculars.filter((c) => c.priority === 'urgent').length}
+                      </Text>
+                    </View>
+                  )}
                 </View>
                 <Text style={styles.circleActionLabel}>Wing Notice</Text>
               </TouchableOpacity>
@@ -357,6 +477,13 @@ export default function TeacherDashboard() {
                       <Text style={styles.heroPortionText}>
                         Unit 3: Laws of Motion & Friction
                       </Text>
+                      {p3Sub?.status === 'allocated' && (
+                        <View style={{ backgroundColor: '#059669', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 4, marginTop: 4 }}>
+                          <Text style={{ fontSize: 10, fontWeight: '800', color: '#FFFFFF' }}>
+                            ✓ Covered by {p3Sub.assignedFaculty}
+                          </Text>
+                        </View>
+                      )}
                     </View>
                   </View>
 
@@ -507,6 +634,135 @@ export default function TeacherDashboard() {
           </View>
         )}
       </ScrollView>
+
+      {/* TEACHER CIRCULARS MODAL */}
+      <Modal
+        visible={isCircularModalVisible}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setIsCircularModalVisible(false)}
+      >
+        <View style={styles.tCirModalOverlay}>
+          <View style={styles.tCirModalCard}>
+            <View style={styles.tCirModalHeader}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                <View style={styles.tCirHeaderIconWrap}>
+                  <Megaphone size={20} color={COLORS.brand[600]} />
+                </View>
+                <View>
+                  <Text style={styles.tCirHeaderTitle}>School Circulars & Notices</Text>
+                  <Text style={styles.tCirHeaderSub}>Faculty & Institutional Advisories</Text>
+                </View>
+              </View>
+              <TouchableOpacity
+                onPress={() => setIsCircularModalVisible(false)}
+                style={styles.tCirCloseBtn}
+              >
+                <X size={20} color={COLORS.slate[600]} />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView
+              style={{ maxHeight: Dimensions.get('window').height * 0.7 }}
+              contentContainerStyle={{ padding: 16, gap: 14 }}
+              showsVerticalScrollIndicator={false}
+            >
+              {teacherCirculars.map((cir) => {
+                const isUrgent = cir.priority === 'urgent';
+                return (
+                  <View key={cir.id} style={[styles.tCirItemCard, SHADOWS.card]}>
+                    <View style={styles.tCirItemTop}>
+                      <View
+                        style={[
+                          styles.tCirBadge,
+                          isUrgent ? styles.tCirBadgeUrgent : styles.tCirBadgeNormal,
+                        ]}
+                      >
+                        <Text
+                          style={[
+                            styles.tCirBadgeText,
+                            isUrgent ? styles.tCirBadgeTextUrgent : styles.tCirBadgeTextNormal,
+                          ]}
+                        >
+                          {isUrgent ? '⚠️ URGENT ADVISORY' : 'FACULTY NOTICE'}
+                        </Text>
+                      </View>
+                      <Text style={styles.tCirMemoText}>{cir.memoNo} • {cir.date}</Text>
+                    </View>
+
+                    <Text style={styles.tCirTitle}>{cir.title}</Text>
+                    <Text style={styles.tCirBody}>{cir.content}</Text>
+
+                    {cir.attachmentUrl && (
+                      <TouchableOpacity
+                        style={styles.tCirAttachmentBox}
+                        onPress={() =>
+                          setSelectedCircularImage({
+                            url: cir.attachmentUrl!,
+                            title: cir.title,
+                          })
+                        }
+                        activeOpacity={0.85}
+                      >
+                        <Image
+                          source={{ uri: cir.attachmentUrl }}
+                          style={styles.tCirAttachmentThumb}
+                        />
+                        <View style={{ flex: 1 }}>
+                          <Text style={styles.tCirAttachmentName} numberOfLines={1}>
+                            {cir.attachmentName || 'Circular Attachment Document'}
+                          </Text>
+                          <Text style={styles.tCirAttachmentSub}>
+                            Tap to view full announcement photo / map
+                          </Text>
+                        </View>
+                        <Eye size={16} color={COLORS.brand[600]} />
+                      </TouchableOpacity>
+                    )}
+
+                    <View style={styles.tCirFooter}>
+                      <ShieldCheck size={13} color={COLORS.presentText} />
+                      <Text style={styles.tCirAuthor}>{cir.author}</Text>
+                    </View>
+                  </View>
+                );
+              })}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
+      {/* FULL-SIZE ATTACHMENT MODAL */}
+      <Modal
+        visible={!!selectedCircularImage}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setSelectedCircularImage(null)}
+      >
+        <View style={styles.tCirImageModalOverlay}>
+          <View style={styles.tCirImageModalContent}>
+            <View style={styles.tCirImageModalHeader}>
+              <Text style={styles.tCirImageModalTitle} numberOfLines={1}>
+                {selectedCircularImage?.title}
+              </Text>
+              <TouchableOpacity
+                onPress={() => setSelectedCircularImage(null)}
+                style={styles.tCirImageModalCloseBtn}
+              >
+                <X size={20} color={COLORS.white} />
+              </TouchableOpacity>
+            </View>
+
+            {selectedCircularImage?.url && (
+              <Image
+                source={{ uri: selectedCircularImage.url }}
+                style={styles.tCirImageModalImage}
+                resizeMode="contain"
+              />
+            )}
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -946,6 +1202,63 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     flex: 1,
     lineHeight: 16,
+  },
+
+  // Coordinator Operations Card (Unified, clean)
+  coordinatorOpsCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    marginBottom: 14,
+    gap: 12,
+  },
+  opsCardRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  opsRowLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    flex: 1,
+  },
+  opsStatusIconCircle: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  opsLabelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  opsItemTitle: {
+    fontSize: 12.5,
+    fontWeight: '700',
+    color: '#0F172A',
+  },
+  opsStatusBadge: {
+    paddingHorizontal: 6,
+    paddingVertical: 1.5,
+    borderRadius: 6,
+  },
+  opsStatusBadgeText: {
+    fontSize: 10,
+    fontWeight: '700',
+  },
+  opsItemSub: {
+    fontSize: 11,
+    color: '#64748B',
+    marginTop: 2,
+  },
+  opsDivider: {
+    height: 1,
+    backgroundColor: '#F1F5F9',
   },
 
   // Coordinator Card
@@ -1490,5 +1803,192 @@ const styles = StyleSheet.create({
     color: COLORS.slate[700],
     fontSize: 11,
     fontWeight: '700',
+  },
+
+  // Teacher Circular Modal Styles
+  tCirModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(15, 23, 42, 0.65)',
+    justifyContent: 'flex-end',
+  },
+  tCirModalCard: {
+    backgroundColor: COLORS.screenBg,
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    overflow: 'hidden',
+    paddingBottom: 24,
+  },
+  tCirModalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 18,
+    backgroundColor: COLORS.white,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.slate[200],
+  },
+  tCirHeaderIconWrap: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: COLORS.brand[50],
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  tCirHeaderTitle: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: COLORS.slate[900],
+  },
+  tCirHeaderSub: {
+    fontSize: 12,
+    color: COLORS.slate[500],
+    marginTop: 2,
+    fontWeight: '500',
+  },
+  tCirCloseBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: COLORS.slate[100],
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  tCirItemCard: {
+    backgroundColor: COLORS.white,
+    borderRadius: 18,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: COLORS.slate[200],
+  },
+  tCirItemTop: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  tCirBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+  },
+  tCirBadgeUrgent: {
+    backgroundColor: '#FEE2E2',
+  },
+  tCirBadgeNormal: {
+    backgroundColor: '#EEF2FF',
+  },
+  tCirBadgeText: {
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 0.5,
+  },
+  tCirBadgeTextUrgent: {
+    color: '#DC2626',
+  },
+  tCirBadgeTextNormal: {
+    color: COLORS.brand[700],
+  },
+  tCirMemoText: {
+    fontSize: 11,
+    color: COLORS.slate[500],
+    fontWeight: '500',
+  },
+  tCirTitle: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: COLORS.slate[900],
+    lineHeight: 20,
+    marginBottom: 6,
+  },
+  tCirBody: {
+    fontSize: 13,
+    color: COLORS.slate[600],
+    lineHeight: 19,
+    marginBottom: 12,
+  },
+  tCirAttachmentBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    backgroundColor: COLORS.brand[50],
+    borderRadius: 12,
+    padding: 10,
+    borderWidth: 1,
+    borderColor: COLORS.brand[100],
+    marginBottom: 12,
+  },
+  tCirAttachmentThumb: {
+    width: 44,
+    height: 44,
+    borderRadius: 8,
+    backgroundColor: COLORS.slate[200],
+  },
+  tCirAttachmentName: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: COLORS.brand[900],
+  },
+  tCirAttachmentSub: {
+    fontSize: 11,
+    color: COLORS.brand[600],
+    marginTop: 2,
+  },
+  tCirFooter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.slate[100],
+  },
+  tCirAuthor: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: COLORS.slate[700],
+  },
+  tCirImageModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(15, 23, 42, 0.85)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 16,
+  },
+  tCirImageModalContent: {
+    width: '100%',
+    maxHeight: '85%',
+    backgroundColor: COLORS.slate[900],
+    borderRadius: 20,
+    overflow: 'hidden',
+  },
+  tCirImageModalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255,255,255,0.1)',
+  },
+  tCirImageModalTitle: {
+    flex: 1,
+    color: COLORS.white,
+    fontSize: 14,
+    fontWeight: '700',
+    marginRight: 12,
+  },
+  tCirImageModalCloseBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  tCirImageModalImage: {
+    width: '100%',
+    height: 380,
+    backgroundColor: '#000000',
   },
 });

@@ -2,6 +2,8 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { supabase } from '@/lib/supabase';
 import {
   Building2,
   Calendar,
@@ -41,6 +43,7 @@ import {
   HelpCircle,
   History,
   Layers,
+  LogOut,
 } from 'lucide-react';
 
 interface PromotionStudent {
@@ -278,7 +281,19 @@ const INITIAL_TC_RECORDS: TCRecord[] = [
 ];
 
 export default function PromotionAndTCPage() {
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState<'promotion' | 'tc' | 'audit'>('promotion');
+
+  const handleLogout = async () => {
+    try {
+      await supabase.auth.signOut();
+    } catch (err) {
+      console.error('Sign out error:', err);
+    }
+    document.cookie = 'school_erp_session=; path=/; max-age=0';
+    document.cookie = 'school_erp_role=; path=/; max-age=0';
+    router.push('/login');
+  };
 
   // Promotion State
   const [selectedClass, setSelectedClass] = useState('Class 8-B');
@@ -355,7 +370,7 @@ export default function PromotionAndTCPage() {
   };
 
   // Execute Batch Promotion and verify in state
-  const handleExecutePromotion = () => {
+  const handleExecutePromotion = async () => {
     const selectedStudents = students.filter((s) => s.selected && s.promotionStatus === 'pending');
     if (selectedStudents.length === 0) {
       alert('Please select at least one student cleared for promotion.');
@@ -363,6 +378,23 @@ export default function PromotionAndTCPage() {
     }
 
     setIsPromoting(true);
+
+    try {
+      await fetch('/api/students/promote', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          studentIds: selectedStudents.map((s) => s.id),
+          targetBatch: targetBatch,
+          sourceBatch: selectedClass,
+          academicYear: '2027-2028',
+          action: 'promote',
+        }),
+      });
+    } catch (e) {
+      console.error('Promotion API sync error:', e);
+    }
+
     setTimeout(() => {
       let rollCounter = 1;
       const promotedNames = selectedStudents.map((s) => s.name);
@@ -401,7 +433,7 @@ export default function PromotionAndTCPage() {
       setPromotionSuccessMsg(
         `Batch Committed! ${selectedStudents.length} students promoted to ${targetBatch} (AY 2027–28). Switch view to "AY 2027–28" to verify new class register.`
       );
-    }, 1000);
+    }, 800);
   };
 
   const handleIssueNewTC = (e: React.FormEvent) => {
@@ -490,7 +522,7 @@ export default function PromotionAndTCPage() {
               </Link>
 
               <Link
-                href="/students"
+                href="/office/students"
                 className="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all text-slate-600 hover:bg-slate-50 hover:text-slate-900"
               >
                 <div className="flex items-center gap-2.5">
@@ -498,7 +530,7 @@ export default function PromotionAndTCPage() {
                   <span>Enrolled Students</span>
                 </div>
                 <span className="text-[9px] font-bold bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded">
-                  1,420
+                  {students.length}
                 </span>
               </Link>
 
@@ -530,15 +562,23 @@ export default function PromotionAndTCPage() {
             </div>
           </div>
 
-          {/* Footer Link to Principal View */}
-          <div className="p-4 border-t border-slate-100">
-            <Link
-              href="/"
-              className="flex items-center justify-center gap-2 w-full py-2.5 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-colors"
+          {/* Office Operator & Sign Out Footer */}
+          <div className="p-4 border-t border-slate-100 bg-slate-50/50 space-y-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs font-bold text-slate-900">Admin Office Terminal</p>
+                <p className="text-[10px] text-slate-500">Academic Promotion Desk</p>
+              </div>
+              <span className="w-2 h-2 rounded-full bg-emerald-500" />
+            </div>
+
+            <button
+              onClick={handleLogout}
+              className="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-xl border border-rose-200 bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-bold transition-colors"
             >
-              <span>Executive Principal View</span>
-              <ArrowRight className="w-3.5 h-3.5" />
-            </Link>
+              <LogOut className="w-3.5 h-3.5" />
+              <span>Lock Desk / Sign Out</span>
+            </button>
           </div>
         </aside>
 

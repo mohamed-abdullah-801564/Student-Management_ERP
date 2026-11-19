@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -22,11 +22,81 @@ import {
 import { COLORS, SHADOWS } from '../../src/constants/theme';
 import { MOCK_REPORT_CARD } from '../../src/constants/mockData';
 import { AnimatedNumberTicker } from '../../src/components/AnimatedNumberTicker';
+import { schoolStore } from '../../src/lib/schoolStore';
 
 export default function ParentMarksScreen() {
   const router = useRouter();
   const navigation = useNavigation<any>();
   const [selectedTerm, setSelectedTerm] = useState('term1');
+
+  const [reportCard, setReportCard] = useState(() => {
+    const marks = schoolStore.getStudentMarks();
+    const rahulMath = marks['rahul'] ?? 96;
+    const updatedSubjects = MOCK_REPORT_CARD.subjectBreakdown.map((s) => {
+      if (s.subject === 'Mathematics') {
+        const grade =
+          rahulMath >= 90
+            ? 'A1'
+            : rahulMath >= 80
+            ? 'A2'
+            : rahulMath >= 70
+            ? 'B1'
+            : rahulMath >= 60
+            ? 'B2'
+            : rahulMath >= 35
+            ? 'C'
+            : 'E';
+        return { ...s, marksObtained: rahulMath, grade };
+      }
+      return s;
+    });
+    const overall = updatedSubjects.reduce((acc, cur) => acc + cur.marksObtained, 0);
+    const total = updatedSubjects.reduce((acc, cur) => acc + cur.maxMarks, 0);
+    const pct = Number(((overall / total) * 100).toFixed(1));
+    return {
+      ...MOCK_REPORT_CARD,
+      overallScore: overall,
+      percentage: pct,
+      subjectBreakdown: updatedSubjects,
+    };
+  });
+
+  useEffect(() => {
+    const updateMarks = () => {
+      const marks = schoolStore.getStudentMarks();
+      const rahulMath = marks['rahul'] ?? 96;
+      const updatedSubjects = MOCK_REPORT_CARD.subjectBreakdown.map((s) => {
+        if (s.subject === 'Mathematics') {
+          const grade =
+            rahulMath >= 90
+              ? 'A1'
+              : rahulMath >= 80
+              ? 'A2'
+              : rahulMath >= 70
+              ? 'B1'
+              : rahulMath >= 60
+              ? 'B2'
+              : rahulMath >= 35
+              ? 'C'
+              : 'E';
+          return { ...s, marksObtained: rahulMath, grade };
+        }
+        return s;
+      });
+      const overall = updatedSubjects.reduce((acc, cur) => acc + cur.marksObtained, 0);
+      const total = updatedSubjects.reduce((acc, cur) => acc + cur.maxMarks, 0);
+      const pct = Number(((overall / total) * 100).toFixed(1));
+      setReportCard((prev) => ({
+        ...prev,
+        overallScore: overall,
+        percentage: pct,
+        subjectBreakdown: updatedSubjects,
+      }));
+    };
+
+    const unsubscribe = schoolStore.subscribe(updateMarks);
+    return unsubscribe;
+  }, []);
 
   const handleBack = () => {
     try {
@@ -112,12 +182,14 @@ export default function ParentMarksScreen() {
             <View style={styles.examBadge}>
               <Sparkles size={12} color="#F59E0B" />
               <Text style={styles.examBadgeText}>
-                {MOCK_REPORT_CARD.examName.toUpperCase()}
+                {reportCard.examName.toUpperCase()}
               </Text>
             </View>
             <View style={styles.passedPill}>
               <CheckCircle2 size={12} color={COLORS.presentText} />
-              <Text style={styles.passedPillText}>Passed with Distinction</Text>
+              <Text style={styles.passedPillText}>
+                {reportCard.percentage >= 90 ? 'Passed with Distinction' : 'Passed'}
+              </Text>
             </View>
           </View>
 
@@ -126,17 +198,17 @@ export default function ParentMarksScreen() {
               <Text style={styles.metricLabel}>SCORE</Text>
               <View style={{ flexDirection: 'row', alignItems: 'baseline' }}>
                 <AnimatedNumberTicker
-                  value={MOCK_REPORT_CARD.overallScore}
+                  value={reportCard.overallScore}
                   style={styles.metricValue}
                 />
-                <Text style={styles.metricTotal}>/{MOCK_REPORT_CARD.totalMarks}</Text>
+                <Text style={styles.metricTotal}>/{reportCard.totalMarks}</Text>
               </View>
             </View>
             <View style={styles.metricDivider} />
             <View style={styles.metricItem}>
               <Text style={styles.metricLabel}>PERCENTAGE</Text>
               <AnimatedNumberTicker
-                value={MOCK_REPORT_CARD.percentage}
+                value={reportCard.percentage}
                 decimalPlaces={1}
                 suffix="%"
                 style={[styles.metricValue, { color: '#10B981' }]}
@@ -146,9 +218,9 @@ export default function ParentMarksScreen() {
             <View style={styles.metricItem}>
               <Text style={styles.metricLabel}>SECTION RANK</Text>
               <Text style={[styles.metricValue, { color: '#F59E0B' }]}>
-                #{MOCK_REPORT_CARD.classRank}
+                #{reportCard.classRank}
                 <Text style={styles.metricTotal}>
-                  /{MOCK_REPORT_CARD.totalStudents}
+                  /{reportCard.totalStudents}
                 </Text>
               </Text>
             </View>
@@ -157,9 +229,9 @@ export default function ParentMarksScreen() {
           {/* In-Charge Remark */}
           <View style={styles.remarkBox}>
             <Text style={styles.remarkHeading}>CLASS TEACHER REMARK</Text>
-            <Text style={styles.remarkText}>"{MOCK_REPORT_CARD.inChargeRemark}"</Text>
+            <Text style={styles.remarkText}>"{reportCard.inChargeRemark}"</Text>
             <Text style={styles.remarkSignature}>
-              — {MOCK_REPORT_CARD.inChargeName}
+              — {reportCard.inChargeName}
             </Text>
           </View>
         </View>
@@ -174,7 +246,7 @@ export default function ParentMarksScreen() {
 
         {/* SUBJECT CARDS */}
         <View style={styles.subjectListContainer}>
-          {MOCK_REPORT_CARD.subjectBreakdown.map((subject, index) => {
+          {reportCard.subjectBreakdown.map((subject, index) => {
             const percentage = Math.round(
               (subject.marksObtained / subject.maxMarks) * 100
             );

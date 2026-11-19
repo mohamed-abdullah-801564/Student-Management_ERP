@@ -23,6 +23,7 @@ import {
   Phone,
 } from 'lucide-react-native';
 import { COLORS, SHADOWS } from '../../src/constants/theme';
+import { schoolStore, StudentLeaveRequest } from '../../src/lib/schoolStore';
 
 interface ApprovalItem {
   id: string;
@@ -79,12 +80,49 @@ export default function CoordinatorApprovalsScreen() {
   const [filter, setFilter] = useState<'all' | 'leave' | 'gate_pass'>('all');
   const [approvedIds, setApprovedIds] = useState<string[]>([]);
   const [declinedIds, setDeclinedIds] = useState<string[]>([]);
+  const [parentLeaveRequests, setParentLeaveRequests] = useState<StudentLeaveRequest[]>(
+    schoolStore.getLeaveRequests()
+  );
+
+  React.useEffect(() => {
+    const unsub = schoolStore.subscribe(() => {
+      setParentLeaveRequests([...schoolStore.getLeaveRequests()]);
+    });
+    return unsub;
+  }, []);
+
+  const mappedParentRequests: ApprovalItem[] = parentLeaveRequests.map((req) => ({
+    id: req.id,
+    type: 'leave',
+    tag: req.status === 'approved' ? 'APPROVED STUDENT LEAVE' : 'PARENT STUDENT ABSENCE REQUEST',
+    tagBg: req.status === 'approved' ? '#DCFCE7' : '#FEF3C7',
+    tagColor: req.status === 'approved' ? '#15803D' : '#B45309',
+    time: `Requested: ${req.requestedAt}`,
+    title: `${req.studentName} (${req.className})`,
+    subtitle: `Guardian: ${req.parentName}`,
+    description: req.reason,
+    meta: [
+      { label: 'Absence Duration', value: req.startDate },
+      { label: 'Homeroom Tutor', value: 'Mrs. Deepa R. (Grade 8-B)' },
+      {
+        label: 'Medical Slip',
+        value: req.medicalNoteUrl ? 'Doctor Certificate Attached' : 'Self-declared by Parent',
+      },
+      {
+        label: 'Approval Status',
+        value: req.status === 'approved' ? 'Approved & Excused ✓' : 'Pending Homeroom Action',
+      },
+    ],
+  }));
+
+  const allRequests = [...mappedParentRequests, ...INITIAL_REQUESTS];
 
   const handleApprove = (item: ApprovalItem) => {
     setApprovedIds((prev) => [...prev, item.id]);
+    schoolStore.approveLeaveRequest(item.id);
     Alert.alert(
       'Authorization Confirmed',
-      `${item.title} has been approved. Digital confirmation dispatched to Front Gate & Records Desk.`,
+      `${item.title} has been approved. Excused absence recorded and confirmation dispatched to parent chat.`,
       [{ text: 'OK' }]
     );
   };
@@ -96,13 +134,13 @@ export default function CoordinatorApprovalsScreen() {
     ]);
   };
 
-  const visibleItems = INITIAL_REQUESTS.filter((item) => {
+  const visibleItems = allRequests.filter((item) => {
     if (filter === 'leave') return item.type === 'leave';
     if (filter === 'gate_pass') return item.type === 'gate_pass';
     return true;
   });
 
-  const pendingCount = INITIAL_REQUESTS.filter(
+  const pendingCount = allRequests.filter(
     (item) => !approvedIds.includes(item.id) && !declinedIds.includes(item.id)
   ).length;
 

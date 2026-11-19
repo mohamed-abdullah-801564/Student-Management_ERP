@@ -145,8 +145,21 @@ export default function LoginPage() {
           return;
         }
 
-        setSessionCookie(data.user.id, userRole);
-        routeByRoleOrEmail(userRole, cleanEmail);
+        let effectiveRole = userRole;
+        if (!effectiveRole || effectiveRole === 'staff') {
+          if (cleanEmail.includes('office') || cleanEmail.includes('accounts') || cleanEmail.includes('admission')) {
+            effectiveRole = 'office';
+          } else if (cleanEmail.includes('principal')) {
+            effectiveRole = 'principal';
+          } else if (cleanEmail.includes('root') || cleanEmail.includes('admin')) {
+            effectiveRole = 'super_admin';
+          } else if (cleanEmail.includes('teacher') || cleanEmail.includes('faculty')) {
+            effectiveRole = 'teacher';
+          }
+        }
+
+        setSessionCookie(data.user.id, effectiveRole);
+        routeByRoleOrEmail(effectiveRole, cleanEmail);
         return;
       }
 
@@ -155,8 +168,8 @@ export default function LoginPage() {
       const validCredentials: Record<string, { pass: string; role: string }> = {
         'root@antigravity.edu': { pass: 'SuperAdmin#2026', role: 'super_admin' },
         'principal@greenwood.edu': { pass: 'Principal#2026', role: 'principal' },
-        'office@greenwood.edu': { pass: 'Office#2026', role: 'principal' },
-        'accounts@greenwood.edu': { pass: 'Accounts#2026', role: 'principal' },
+        'office@greenwood.edu': { pass: 'Office#2026', role: 'office' },
+        'accounts@greenwood.edu': { pass: 'Accounts#2026', role: 'office' },
         'teacher@greenwood.edu': { pass: 'Teacher#2026', role: 'teacher' },
       };
 

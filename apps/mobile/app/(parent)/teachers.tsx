@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -6,6 +6,7 @@ import {
   ScrollView,
   TouchableOpacity,
   Alert,
+  Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useNavigation } from 'expo-router';
@@ -18,6 +19,7 @@ import {
   Award,
 } from 'lucide-react-native';
 import { COLORS, SHADOWS } from '../../src/constants/theme';
+import { schoolStore } from '../../src/lib/schoolStore';
 
 interface TeacherFaculty {
   id: string;
@@ -89,6 +91,14 @@ const CLASS_8B_FACULTY: TeacherFaculty[] = [
 export default function ParentTeachersScreen() {
   const router = useRouter();
   const navigation = useNavigation<any>();
+  const [facultyPhoto, setFacultyPhoto] = useState<string | null>(schoolStore.getFacultyPhoto());
+
+  useEffect(() => {
+    const unsub = schoolStore.subscribe(() => {
+      setFacultyPhoto(schoolStore.getFacultyPhoto());
+    });
+    return unsub;
+  }, []);
 
   const handleBack = () => {
     try {
@@ -146,22 +156,33 @@ export default function ParentTeachersScreen() {
               ]}
             >
               <View style={styles.cardTopRow}>
-                {/* Avatar with Initials */}
-                <View
-                  style={[
-                    styles.avatarBox,
-                    faculty.isClassTeacher && styles.avatarBoxClassTeacher,
-                  ]}
-                >
-                  <Text
+                {/* Avatar with Photo or Initials */}
+                {faculty.isClassTeacher && facultyPhoto ? (
+                  <Image
+                    source={{ uri: facultyPhoto }}
                     style={[
-                      styles.avatarText,
-                      faculty.isClassTeacher && styles.avatarTextClassTeacher,
+                      styles.avatarBox,
+                      styles.avatarBoxClassTeacher,
+                      { borderRadius: 24 },
+                    ]}
+                  />
+                ) : (
+                  <View
+                    style={[
+                      styles.avatarBox,
+                      faculty.isClassTeacher && styles.avatarBoxClassTeacher,
                     ]}
                   >
-                    {faculty.initials}
-                  </Text>
-                </View>
+                    <Text
+                      style={[
+                        styles.avatarText,
+                        faculty.isClassTeacher && styles.avatarTextClassTeacher,
+                      ]}
+                    >
+                      {faculty.initials}
+                    </Text>
+                  </View>
+                )}
 
                 <View style={styles.facultyInfo}>
                   <View style={styles.nameRow}>

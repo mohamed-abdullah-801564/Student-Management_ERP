@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -6,30 +6,43 @@ import {
   ScrollView,
   StyleSheet,
   Alert,
+  Modal,
 } from 'react-native';
 import { useRouter, useNavigation } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   ChevronLeft,
   Calendar,
-  AlertTriangle,
-  Scale,
-  Sparkles,
-  ArrowRight,
   CheckCircle2,
-  Zap,
-  Send,
+  Clock,
+  UserCheck,
+  Building2,
+  ArrowRight,
+  Shield,
+  AlertCircle,
   X,
 } from 'lucide-react-native';
 import { COLORS, SHADOWS } from '../../src/constants/theme';
+import { schoolStore, SubstitutionRecord } from '../../src/lib/schoolStore';
 
 export default function SubstituteAllocationScreen() {
   const router = useRouter();
   const navigation = useNavigation<any>();
-  const [activeTab, setActiveTab] = useState<'teaching' | 'duties'>('duties');
-  const [selectedTeacher, setSelectedTeacher] = useState<string>('karthik');
-  const [showConfirmSheet, setShowConfirmSheet] = useState(false);
-  const [isAssigned, setIsAssigned] = useState(false);
+
+  const [activeTab, setActiveTab] = useState<'pending' | 'allocated'>('pending');
+  const [substitutions, setSubstitutions] = useState<SubstitutionRecord[]>(schoolStore.getSubstitutions());
+  const [selectedSubForConfirm, setSelectedSubForConfirm] = useState<{
+    sub: SubstitutionRecord;
+    teacherName: string;
+    teacherDept: string;
+  } | null>(null);
+
+  useEffect(() => {
+    const unsubscribe = schoolStore.subscribe(() => {
+      setSubstitutions(schoolStore.getSubstitutions());
+    });
+    return unsubscribe;
+  }, []);
 
   const handleBack = () => {
     try {
@@ -43,343 +56,339 @@ export default function SubstituteAllocationScreen() {
     }
   };
 
-  const handleConfirm = () => {
-    setIsAssigned(true);
-    setShowConfirmSheet(false);
+  const handleConfirmAssignment = () => {
+    if (!selectedSubForConfirm) return;
+    const { sub, teacherName } = selectedSubForConfirm;
+
+    schoolStore.assignSubstitute(sub.id, teacherName);
+    setSelectedSubForConfirm(null);
+
     Alert.alert(
-      'Substitute Assigned!',
-      'Mr. Karthik Raja has been notified via instant push alert. Grade 9-B timetable updated.',
+      'Substitute Allocated ✓',
+      `${teacherName} has been assigned to ${sub.gradeSection} (${sub.period} - ${sub.subject}). Notification dispatched to faculty.`,
       [{ text: 'OK' }]
     );
   };
 
+  const pendingList = substitutions.filter((s) => s.status === 'pending');
+  const allocatedList = substitutions.filter((s) => s.status === 'allocated');
+
   return (
     <SafeAreaView style={styles.safeArea}>
-      {/* Top Header */}
+      {/* 1. INSTITUTIONAL TOP BAR */}
       <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={handleBack}
-          activeOpacity={0.8}
-        >
-          <ChevronLeft size={20} color={COLORS.slate[700]} strokeWidth={2.5} />
-        </TouchableOpacity>
-
-        <View style={styles.headerTitleCenter}>
-          <View style={styles.titleRow}>
-            <Text style={styles.headerTitle}>Coordinator Desk</Text>
-            <View style={styles.liveGreenDot} />
+        <View style={styles.headerLeft}>
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={handleBack}
+            activeOpacity={0.7}
+          >
+            <ChevronLeft size={20} color={COLORS.slate[800]} strokeWidth={2.5} />
+          </TouchableOpacity>
+          <View>
+            <Text style={styles.headerTitle}>Faculty Substitution Desk</Text>
+            <Text style={styles.headerSubtitle}>
+              Greenwood Academy • Coordinator Terminal
+            </Text>
           </View>
-          <Text style={styles.headerSubtitle}>
-            Daily Substitute Allocation • Mon, 16 Nov
-          </Text>
         </View>
 
-        <TouchableOpacity style={styles.historyButton} activeOpacity={0.8}>
-          <Calendar size={17} color={COLORS.brand[600]} />
-        </TouchableOpacity>
+        <View style={styles.dateTag}>
+          <Calendar size={13} color={COLORS.slate[600]} />
+          <Text style={styles.dateTagText}>Today • 16 Nov</Text>
+        </View>
       </View>
 
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* Alert Hero Banner: Unplanned Absences */}
-        <View style={styles.urgentBanner}>
-          <View style={styles.urgentHeaderRow}>
-            <View style={styles.urgentTitleRow}>
-              <View style={styles.warningIconSquare}>
-                <Text style={styles.warningEmoji}>⚠️</Text>
-              </View>
-              <Text style={styles.urgentBannerTitle}>2 Faculty Unplanned Absences</Text>
-            </View>
-            <View style={styles.pendingBadge}>
-              <Text style={styles.pendingBadgeText}>4 Pending</Text>
-            </View>
+        {/* 2. OPERATIONAL SUMMARY KPI BAR */}
+        <View style={[styles.kpiContainer, SHADOWS.card]}>
+          <View style={styles.kpiItem}>
+            <Text style={styles.kpiValuePending}>{pendingList.length}</Text>
+            <Text style={styles.kpiLabel}>Pending Allocation</Text>
           </View>
-
-          {/* Row 1: Mr Rajesh */}
-          <View style={styles.absenceItemRow}>
-            <View>
-              <Text style={styles.absentName}>Mr. Rajesh S.</Text>
-              <Text style={styles.absentSub}>Science Dept • 4 Periods Affected</Text>
-            </View>
-            <View style={styles.unassignedBadge}>
-              <Text style={styles.unassignedBadgeText}>2 Unassigned</Text>
-            </View>
+          <View style={styles.kpiDivider} />
+          <View style={styles.kpiItem}>
+            <Text style={styles.kpiValueAllocated}>{allocatedList.length}</Text>
+            <Text style={styles.kpiLabel}>Covered Today</Text>
           </View>
-
-          {/* Row 2: Mrs Kavitha */}
-          <View style={styles.absenceItemRow}>
-            <View>
-              <Text style={styles.absentName}>Mrs. Kavitha Nair</Text>
-              <Text style={styles.absentSub}>English Dept • 3 Periods Affected</Text>
-            </View>
-            <View style={styles.unassignedBadgeAmber}>
-              <Text style={styles.unassignedBadgeAmberText}>1 Unassigned</Text>
-            </View>
-          </View>
-
-          {/* Progress Meter */}
-          <View style={styles.meterRow}>
-            <View style={styles.meterTextGroup}>
-              <View style={styles.greenMeterDot} />
-              <Text style={styles.meterStatusText}>3 of 7 Reallocated</Text>
-            </View>
-            <View style={styles.meterProgressBarTrack}>
-              <View style={styles.meterProgressBarFill} />
-            </View>
+          <View style={styles.kpiDivider} />
+          <View style={styles.kpiItem}>
+            <Text style={styles.kpiValueTotal}>2</Text>
+            <Text style={styles.kpiLabel}>Faculty on Leave</Text>
           </View>
         </View>
 
-        {/* Critical Allocation Needed Section */}
-        <View style={styles.sectionHeader}>
-          <View style={styles.sectionTitleRow}>
-            <View style={styles.pulsingRedDot} />
-            <Text style={styles.sectionTitle}>Critical Allocation Needed</Text>
-          </View>
-          <View style={styles.urgentPeriodTag}>
-            <Text style={styles.urgentPeriodTagText}>Urgent • Period 3</Text>
-          </View>
-        </View>
-
-        {/* Main Focus Card */}
-        <View style={[styles.focusCard, SHADOWS.card]}>
-          <View style={styles.focusCardTop}>
-            <View>
-              <View style={styles.periodBadgeRow}>
-                <View style={styles.periodNumberPill}>
-                  <Text style={styles.periodNumberText}>Period 3</Text>
-                </View>
-                <Text style={styles.periodTimeText}>10:15 – 11:00 AM</Text>
-              </View>
-              <Text style={styles.focusClassName}>Grade 9 – B</Text>
-              <Text style={styles.focusSubject}>Physics / General Science • Room 302</Text>
-            </View>
-
-            <View style={styles.focusRight}>
-              <View style={styles.needsSubPill}>
-                <View style={styles.subPillDot} />
-                <Text style={styles.needsSubPillText}>Needs Substitute</Text>
-              </View>
-              <Text style={styles.absenceReason}>Absence: Mr. Rajesh (Medical)</Text>
-            </View>
-          </View>
-
-          {/* Smart Faculty Match Box */}
-          <View style={styles.matchBox}>
-            <View style={styles.matchBoxHeader}>
-              <View style={styles.matchHeaderLeft}>
-                <Scale size={14} color={COLORS.brand[600]} />
-                <Text style={styles.matchBoxTitle}>SMART FACULTY MATCHING</Text>
-              </View>
-              <Text style={styles.availableCount}>2 Teachers Available</Text>
-            </View>
-
-            {/* Recommendation 1: Mr. Karthik Raja (Highlighted) */}
-            <TouchableOpacity
+        {/* 3. SEGMENTED TABS */}
+        <View style={styles.tabContainer}>
+          <TouchableOpacity
+            style={[styles.tabBtn, activeTab === 'pending' && styles.tabBtnActive]}
+            onPress={() => setActiveTab('pending')}
+            activeOpacity={0.8}
+          >
+            <Text
               style={[
-                styles.recCardHighlighted,
-                selectedTeacher === 'karthik' && styles.recCardSelected,
+                styles.tabText,
+                activeTab === 'pending' && styles.tabTextActive,
               ]}
-              onPress={() => setSelectedTeacher('karthik')}
-              activeOpacity={0.88}
             >
-              <View style={styles.topBadge}>
-                <Text style={styles.topBadgeText}>★ TOP RECOMMENDED</Text>
-              </View>
+              Action Required ({pendingList.length})
+            </Text>
+          </TouchableOpacity>
 
-              <View style={styles.recCardContent}>
-                <View style={styles.avatarCircleKR}>
-                  <Text style={styles.avatarTextKR}>KR</Text>
-                  <View style={styles.onlineDot} />
-                </View>
+          <TouchableOpacity
+            style={[styles.tabBtn, activeTab === 'allocated' && styles.tabBtnActive]}
+            onPress={() => setActiveTab('allocated')}
+            activeOpacity={0.8}
+          >
+            <Text
+              style={[
+                styles.tabText,
+                activeTab === 'allocated' && styles.tabTextActive,
+              ]}
+            >
+              Covered Schedule ({allocatedList.length})
+            </Text>
+          </TouchableOpacity>
+        </View>
 
-                <View style={styles.recDetails}>
-                  <Text style={styles.recName}>Mr. Karthik Raja</Text>
-                  <Text style={styles.recDept}>Physics & Chemistry Dept</Text>
-
-                  <View style={styles.recTagsRow}>
-                    <View style={styles.freePeriodPill}>
-                      <Text style={styles.freePeriodText}>Free Period 3</Text>
-                    </View>
-                    <View style={styles.loadPill}>
-                      <Text style={styles.loadPillText}>Today: 2/6 Periods</Text>
-                    </View>
-                  </View>
-                </View>
-              </View>
-
-              <TouchableOpacity
-                style={styles.assignButton}
-                onPress={() => setShowConfirmSheet(true)}
-                activeOpacity={0.85}
-              >
-                <Text style={styles.assignButtonText}>
-                  {isAssigned ? 'Assigned Successfully ✓' : 'Assign Substitute'}
+        {/* 4. TAB 1: PENDING SUBSTITUTION REQUESTS */}
+        {activeTab === 'pending' && (
+          <View style={styles.listSection}>
+            {pendingList.length === 0 ? (
+              <View style={[styles.emptyCard, SHADOWS.card]}>
+                <CheckCircle2 size={32} color="#059669" />
+                <Text style={styles.emptyTitle}>All Periods Covered</Text>
+                <Text style={styles.emptySub}>
+                  There are no pending unassigned substitutions for today.
                 </Text>
-                {!isAssigned && <ArrowRight size={14} color="#FFFFFF" />}
-              </TouchableOpacity>
-            </TouchableOpacity>
-
-            {/* Recommendation 2: Mrs. Shalini Raman */}
-            <View style={styles.recCardSecondary}>
-              <View style={styles.recLeft}>
-                <View style={styles.avatarCircleSR}>
-                  <Text style={styles.avatarTextSR}>SR</Text>
-                </View>
-                <View>
-                  <Text style={styles.secondaryName}>Mrs. Shalini Raman</Text>
-                  <Text style={styles.secondarySub}>Math Dept • Load: 4/6 periods</Text>
-                </View>
               </View>
-              <TouchableOpacity
-                style={styles.secondaryAssignButton}
-                onPress={() => {
-                  setSelectedTeacher('shalini');
-                  setShowConfirmSheet(true);
-                }}
-                activeOpacity={0.8}
-              >
-                <Text style={styles.secondaryAssignText}>Assign</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-
-        {/* Covered Today Section */}
-        <View style={styles.coveredSection}>
-          <View style={styles.coveredHeader}>
-            <View style={styles.coveredTitleRow}>
-              <Text style={styles.coveredTitle}>Covered Today</Text>
-              <View style={styles.coveredCountPill}>
-                <Text style={styles.coveredCountText}>3 / 7</Text>
-              </View>
-            </View>
-            <TouchableOpacity>
-              <Text style={styles.viewLogText}>View Log →</Text>
-            </TouchableOpacity>
-          </View>
-
-          <View style={styles.coveredList}>
-            {/* Item 1 */}
-            <View style={[styles.coveredItem, SHADOWS.card]}>
-              <View style={styles.coveredItemLeft}>
-                <View style={styles.checkIconBox}>
-                  <CheckCircle2 size={16} color={COLORS.present} />
-                </View>
-                <View>
-                  <View style={styles.coveredPeriodRow}>
-                    <Text style={styles.coveredPeriod}>Period 1</Text>
-                    <Text style={styles.coveredClass}>• Grade 8-A Maths</Text>
+            ) : (
+              pendingList.map((sub) => (
+                <View key={sub.id} style={[styles.subCard, SHADOWS.card]}>
+                  {/* Card Header */}
+                  <View style={styles.subCardHeader}>
+                    <View style={styles.periodPill}>
+                      <Clock size={12} color="#4338CA" />
+                      <Text style={styles.periodPillText}>{sub.period}</Text>
+                    </View>
+                    <Text style={styles.timeSlotText}>{sub.timeSlot}</Text>
+                    <View style={styles.urgentBadge}>
+                      <Text style={styles.urgentBadgeText}>Unallocated</Text>
+                    </View>
                   </View>
-                  <Text style={styles.coveredTeacher}>
-                    Covered by <Text style={styles.bold}>Mrs. Deepa</Text>
-                  </Text>
-                </View>
-              </View>
-              <View style={styles.verifiedPill}>
-                <Text style={styles.verifiedPillText}>Verified</Text>
-              </View>
-            </View>
 
-            {/* Item 2 */}
-            <View style={[styles.coveredItem, SHADOWS.card]}>
-              <View style={styles.coveredItemLeft}>
-                <View style={styles.checkIconBox}>
-                  <CheckCircle2 size={16} color={COLORS.present} />
-                </View>
-                <View>
-                  <View style={styles.coveredPeriodRow}>
-                    <Text style={styles.coveredPeriod}>Period 2</Text>
-                    <Text style={styles.coveredClass}>• Grade 10-C English</Text>
+                  {/* Class & Subject Details */}
+                  <View style={styles.classInfoRow}>
+                    <View style={styles.classInfoLeft}>
+                      <Text style={styles.gradeTitle}>{sub.gradeSection}</Text>
+                      <Text style={styles.subjectText} numberOfLines={1}>
+                        {sub.subject} • {sub.room}
+                      </Text>
+                    </View>
+                    <View style={styles.absentFacultyBox}>
+                      <Text style={styles.absentLabel}>Absent Faculty</Text>
+                      <Text style={styles.absentFacultyName} numberOfLines={1}>{sub.absentFaculty}</Text>
+                      <Text style={styles.leaveReasonText} numberOfLines={1}>{sub.leaveReason}</Text>
+                    </View>
                   </View>
-                  <Text style={styles.coveredTeacher}>
-                    Covered by <Text style={styles.bold}>Mr. Anand Verma</Text>
-                  </Text>
-                </View>
-              </View>
-              <View style={styles.verifiedPill}>
-                <Text style={styles.verifiedPillText}>Verified</Text>
-              </View>
-            </View>
 
-            {/* Item 3 */}
-            <View style={[styles.coveredItem, SHADOWS.card]}>
-              <View style={styles.coveredItemLeft}>
-                <View style={styles.checkIconBox}>
-                  <CheckCircle2 size={16} color={COLORS.present} />
-                </View>
-                <View>
-                  <View style={styles.coveredPeriodRow}>
-                    <Text style={styles.coveredPeriod}>Period 2</Text>
-                    <Text style={styles.coveredClass}>• Grade 7-B Science</Text>
+                  {/* Available Faculty Matching Table */}
+                  <View style={styles.facultyMatchingBox}>
+                    <Text style={styles.matchingHeader}>
+                      FREE FACULTY AVAILABLE DURING {sub.period.toUpperCase()}
+                    </Text>
+
+                    {/* Faculty Option 1 */}
+                    <View style={styles.facultyRow}>
+                      <View style={styles.facultyMeta}>
+                        <View style={styles.facultyAvatar}>
+                          <Text style={styles.facultyAvatarText}>KR</Text>
+                        </View>
+                        <View style={styles.facultyInfo}>
+                          <Text style={styles.facultyName} numberOfLines={1}>Mr. Karthik Raja</Text>
+                          <Text style={styles.facultySub} numberOfLines={1}>
+                            Physics Dept • Free {sub.period} • Load: 2/6
+                          </Text>
+                        </View>
+                      </View>
+                      <TouchableOpacity
+                        style={styles.assignPrimaryBtn}
+                        onPress={() =>
+                          setSelectedSubForConfirm({
+                            sub,
+                            teacherName: 'Mr. Karthik Raja',
+                            teacherDept: 'Physics Dept',
+                          })
+                        }
+                        activeOpacity={0.8}
+                      >
+                        <Text style={styles.assignPrimaryText}>Assign</Text>
+                      </TouchableOpacity>
+                    </View>
+
+                    {/* Faculty Option 2 */}
+                    <View style={styles.facultyRow}>
+                      <View style={styles.facultyMeta}>
+                        <View style={styles.facultyAvatarMuted}>
+                          <Text style={styles.facultyAvatarTextMuted}>SR</Text>
+                        </View>
+                        <View style={styles.facultyInfo}>
+                          <Text style={styles.facultyName} numberOfLines={1}>Mrs. Shalini Raman</Text>
+                          <Text style={styles.facultySub} numberOfLines={1}>
+                            Math Dept • Free {sub.period} • Load: 4/6
+                          </Text>
+                        </View>
+                      </View>
+                      <TouchableOpacity
+                        style={styles.assignSecondaryBtn}
+                        onPress={() =>
+                          setSelectedSubForConfirm({
+                            sub,
+                            teacherName: 'Mrs. Shalini Raman',
+                            teacherDept: 'Math Dept',
+                          })
+                        }
+                        activeOpacity={0.8}
+                      >
+                        <Text style={styles.assignSecondaryText}>Assign</Text>
+                      </TouchableOpacity>
+                    </View>
                   </View>
-                  <Text style={styles.coveredTeacher}>
-                    Covered by <Text style={styles.bold}>Ms. Radhika</Text>
-                  </Text>
                 </View>
-              </View>
-              <View style={styles.verifiedPill}>
-                <Text style={styles.verifiedPillText}>Verified</Text>
-              </View>
-            </View>
+              ))
+            )}
           </View>
-        </View>
+        )}
+
+        {/* 5. TAB 2: ALLOCATED COVERED SCHEDULE */}
+        {activeTab === 'allocated' && (
+          <View style={styles.listSection}>
+            {allocatedList.map((sub) => (
+              <View key={sub.id} style={[styles.coveredCard, SHADOWS.card]}>
+                <View style={styles.coveredHeader}>
+                  <View style={styles.periodPillAllocated}>
+                    <CheckCircle2 size={12} color="#059669" />
+                    <Text style={styles.periodPillAllocatedText}>{sub.period}</Text>
+                  </View>
+                  <Text style={styles.timeSlotText}>{sub.timeSlot}</Text>
+                  <View style={styles.confirmedBadge}>
+                    <Text style={styles.confirmedBadgeText}>Covered ✓</Text>
+                  </View>
+                </View>
+
+                <View style={styles.coveredBody}>
+                  <Text style={styles.gradeTitle}>{sub.gradeSection}</Text>
+                  <Text style={styles.subjectText}>
+                    {sub.subject} • {sub.room}
+                  </Text>
+
+                  <View style={styles.allocationSummaryBox}>
+                    <View style={styles.allocCol}>
+                      <Text style={styles.allocColLabel}>Original Faculty</Text>
+                      <Text style={styles.allocColName}>{sub.absentFaculty}</Text>
+                      <Text style={styles.allocColSub}>{sub.leaveReason}</Text>
+                    </View>
+                    <View style={styles.allocArrowCol}>
+                      <ArrowRight size={14} color={COLORS.slate[400]} />
+                    </View>
+                    <View style={styles.allocCol}>
+                      <Text style={styles.allocColLabel}>Assigned Substitute</Text>
+                      <Text style={styles.allocColNameAssigned}>
+                        {sub.assignedFaculty}
+                      </Text>
+                      <Text style={styles.allocColSub}>
+                        Confirmed • {sub.assignedAt || 'Today'}
+                      </Text>
+                    </View>
+                  </View>
+                </View>
+              </View>
+            ))}
+          </View>
+        )}
       </ScrollView>
 
-      {/* Confirmation Bottom Sheet (Only shows on-demand when coordinator taps Assign) */}
-      {showConfirmSheet && (
-        <View style={[styles.bottomSheet, SHADOWS.nav]}>
-          <View style={styles.sheetHandle} />
-          <View style={styles.sheetTopRow}>
-            <View>
-              <View style={styles.dispatchStatusRow}>
-                <View style={styles.dispatchBlueDot} />
-                <Text style={styles.dispatchLabel}>CONFIRM SUBSTITUTION</Text>
+      {/* 6. CONFIRMATION SHEET MODAL */}
+      {selectedSubForConfirm && (
+        <Modal
+          visible={true}
+          transparent={true}
+          animationType="fade"
+          onRequestClose={() => setSelectedSubForConfirm(null)}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalSheet}>
+              <View style={styles.modalHeader}>
+                <div>
+                  <Text style={styles.modalTitle}>Confirm Substitute Assignment</Text>
+                  <Text style={styles.modalSub}>
+                    Greenwood Academy Official Dispatch
+                  </Text>
+                </div>
+                <TouchableOpacity
+                  onPress={() => setSelectedSubForConfirm(null)}
+                  style={styles.closeBtn}
+                >
+                  <X size={18} color={COLORS.slate[500]} />
+                </TouchableOpacity>
               </View>
-              <Text style={styles.sheetTitle}>
-                {selectedTeacher === 'shalini' ? 'Assign Mrs. Shalini Raman?' : 'Assign Mr. Karthik Raja?'}
-              </Text>
-              <Text style={styles.sheetSubtitle}>
-                Grade 9-B • Period 3 (10:15 AM – 11:00 AM)
-              </Text>
+
+              <View style={styles.modalDetailsBox}>
+                <View style={styles.modalRow}>
+                  <Text style={styles.modalLabel}>Class & Period:</Text>
+                  <Text style={styles.modalValue}>
+                    {selectedSubForConfirm.sub.gradeSection} • {selectedSubForConfirm.sub.period} ({selectedSubForConfirm.sub.timeSlot})
+                  </Text>
+                </View>
+                <View style={styles.modalRow}>
+                  <Text style={styles.modalLabel}>Subject & Room:</Text>
+                  <Text style={styles.modalValue}>
+                    {selectedSubForConfirm.sub.subject} • {selectedSubForConfirm.sub.room}
+                  </Text>
+                </View>
+                <View style={styles.modalRow}>
+                  <Text style={styles.modalLabel}>Absent Teacher:</Text>
+                  <Text style={styles.modalValue}>
+                    {selectedSubForConfirm.sub.absentFaculty}
+                  </Text>
+                </View>
+                <View style={[styles.modalRow, { borderBottomWidth: 0 }]}>
+                  <Text style={styles.modalLabel}>Assigned Substitute:</Text>
+                  <Text style={styles.modalValueBold}>
+                    {selectedSubForConfirm.teacherName} ({selectedSubForConfirm.teacherDept})
+                  </Text>
+                </View>
+              </View>
+
+              <View style={styles.noticeBox}>
+                <Shield size={14} color="#059669" />
+                <Text style={styles.noticeText}>
+                  An immediate notification will be dispatched to {selectedSubForConfirm.teacherName}'s mobile app and the daily timetable will reflect this coverage.
+                </Text>
+              </View>
+
+              <View style={styles.modalActions}>
+                <TouchableOpacity
+                  style={styles.modalCancelBtn}
+                  onPress={() => setSelectedSubForConfirm(null)}
+                  activeOpacity={0.8}
+                >
+                  <Text style={styles.modalCancelText}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.modalConfirmBtn}
+                  onPress={handleConfirmAssignment}
+                  activeOpacity={0.85}
+                >
+                  <Text style={styles.modalConfirmText}>Confirm & Dispatch</Text>
+                </TouchableOpacity>
+              </View>
             </View>
-
-            <TouchableOpacity
-              onPress={() => setShowConfirmSheet(false)}
-              style={styles.closeSheetBtn}
-            >
-              <X size={18} color={COLORS.slate[500]} />
-            </TouchableOpacity>
           </View>
-
-          <View style={styles.alertNoticeBox}>
-            <Zap size={14} color={COLORS.late} />
-            <Text style={styles.alertNoticeText}>
-              Push notification will be dispatched to faculty member. Timetable and class display will auto-sync.
-            </Text>
-          </View>
-
-          <View style={styles.sheetActionRow}>
-            <TouchableOpacity
-              style={styles.changeButton}
-              onPress={() => setShowConfirmSheet(false)}
-              activeOpacity={0.8}
-            >
-              <Text style={styles.changeButtonText}>Cancel</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.confirmDispatchButton}
-              onPress={handleConfirm}
-              activeOpacity={0.88}
-            >
-              <Text style={styles.confirmDispatchText}>Confirm Allocation</Text>
-              <Send size={14} color="#FFFFFF" />
-            </TouchableOpacity>
-          </View>
-        </View>
+        </Modal>
       )}
     </SafeAreaView>
   );
@@ -388,770 +397,516 @@ export default function SubstituteAllocationScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: COLORS.screenBg,
+    backgroundColor: '#F8FAFC',
   },
   header: {
     flexDirection: 'row',
+    alignItems: 'center',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingTop: 8,
-    paddingBottom: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: '#FFFFFF',
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.slate[200],
-    backgroundColor: COLORS.white,
+    borderBottomColor: '#E2E8F0',
   },
-  backButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: COLORS.slate[100],
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  headerTitleCenter: {
-    alignItems: 'center',
-  },
-  titleRow: {
+  headerLeft: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 10,
+  },
+  backButton: {
+    padding: 6,
+    borderRadius: 8,
+    backgroundColor: '#F1F5F9',
   },
   headerTitle: {
     fontSize: 16,
     fontWeight: '800',
-    color: COLORS.slate[900],
-  },
-  liveGreenDot: {
-    width: 7,
-    height: 7,
-    borderRadius: 3.5,
-    backgroundColor: COLORS.present,
+    color: '#0F172A',
+    letterSpacing: -0.2,
   },
   headerSubtitle: {
     fontSize: 11,
-    color: COLORS.slate[500],
+    color: '#64748B',
     marginTop: 1,
   },
-  historyButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: COLORS.brand[50],
+  dateTag: {
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
+    gap: 5,
+    paddingHorizontal: 9,
+    paddingVertical: 5,
+    borderRadius: 8,
+    backgroundColor: '#F1F5F9',
+  },
+  dateTagText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#334155',
   },
   scrollContent: {
-    paddingHorizontal: 16,
-    paddingTop: 12,
-    paddingBottom: 160,
+    padding: 16,
     gap: 14,
   },
-  navControl: {
+  kpiContainer: {
     flexDirection: 'row',
-    backgroundColor: COLORS.slate[200],
-    borderRadius: 16,
-    padding: 4,
-  },
-  navTab: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 9,
-    borderRadius: 12,
-    gap: 6,
-  },
-  navTabActive: {
-    backgroundColor: COLORS.white,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.08,
-    shadowRadius: 2,
-    elevation: 2,
-  },
-  navTabText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: COLORS.slate[600],
-  },
-  navTabTextActive: {
-    fontWeight: '800',
-    color: COLORS.brand[700],
-  },
-  activePill: {
-    backgroundColor: COLORS.brand[100],
-    paddingHorizontal: 6,
-    paddingVertical: 1,
-    borderRadius: 8,
-  },
-  activePillText: {
-    fontSize: 9,
-    fontWeight: '800',
-    color: COLORS.brand[700],
-  },
-  urgentBanner: {
-    backgroundColor: '#FFF4F2',
-    borderRadius: 20,
-    padding: 14,
-    borderWidth: 1,
-    borderColor: '#FECDD3',
-    gap: 10,
-  },
-  urgentHeaderRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    borderBottomWidth: 1,
-    borderBottomColor: '#FEE2E2',
-    paddingBottom: 8,
-  },
-  urgentTitleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  warningIconSquare: {
-    width: 24,
-    height: 24,
-    borderRadius: 6,
-    backgroundColor: '#FFE4E6',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  warningEmoji: {
-    fontSize: 12,
-  },
-  urgentBannerTitle: {
-    fontSize: 11,
-    fontWeight: '800',
-    color: '#E11D48',
-    letterSpacing: 0.3,
-  },
-  pendingBadge: {
-    backgroundColor: '#FFE4E6',
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 6,
-  },
-  pendingBadgeText: {
-    fontSize: 10,
-    fontWeight: '800',
-    color: '#BE123C',
-  },
-  absenceItemRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.8)',
+    backgroundColor: '#FFFFFF',
     borderRadius: 14,
-    padding: 10,
     borderWidth: 1,
-    borderColor: '#FEE2E2',
-  },
-  absentName: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: COLORS.slate[800],
-  },
-  absentSub: {
-    fontSize: 11,
-    color: COLORS.slate[500],
-    marginTop: 1,
-  },
-  unassignedBadge: {
-    backgroundColor: '#FEE2E2',
+    borderColor: '#E2E8F0',
+    paddingVertical: 14,
     paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#FECDD3',
   },
-  unassignedBadgeText: {
-    fontSize: 10,
-    fontWeight: '800',
+  kpiItem: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  kpiValuePending: {
+    fontSize: 20,
+    fontWeight: '900',
     color: '#E11D48',
   },
-  unassignedBadgeAmber: {
-    backgroundColor: COLORS.lateBg,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: COLORS.lateBorder,
+  kpiValueAllocated: {
+    fontSize: 20,
+    fontWeight: '900',
+    color: '#059669',
   },
-  unassignedBadgeAmberText: {
-    fontSize: 10,
-    fontWeight: '800',
-    color: COLORS.lateText,
+  kpiValueTotal: {
+    fontSize: 20,
+    fontWeight: '900',
+    color: '#4338CA',
   },
-  meterRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginTop: 2,
-  },
-  meterTextGroup: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  greenMeterDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: COLORS.present,
-  },
-  meterStatusText: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: COLORS.slate[600],
-  },
-  meterProgressBarTrack: {
-    width: 120,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: COLORS.slate[200],
-    overflow: 'hidden',
-  },
-  meterProgressBarFill: {
-    width: '43%',
-    height: '100%',
-    backgroundColor: COLORS.brand[600],
-    borderRadius: 3,
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  sectionTitleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  pulsingRedDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: COLORS.absent,
-  },
-  sectionTitle: {
-    fontSize: 14,
-    fontWeight: '800',
-    color: COLORS.slate[900],
-  },
-  urgentPeriodTag: {
-    backgroundColor: COLORS.brand[50],
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 8,
-  },
-  urgentPeriodTagText: {
-    fontSize: 10,
+  kpiLabel: {
+    fontSize: 10.5,
     fontWeight: '700',
-    color: COLORS.brand[700],
+    color: '#64748B',
+    marginTop: 2,
+    textTransform: 'uppercase',
   },
-  focusCard: {
-    backgroundColor: COLORS.white,
-    borderRadius: 22,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: COLORS.slate[200],
+  kpiDivider: {
+    width: 1,
+    backgroundColor: '#E2E8F0',
+    marginVertical: 4,
+  },
+  tabContainer: {
+    flexDirection: 'row',
+    backgroundColor: '#E2E8F0',
+    borderRadius: 10,
+    padding: 3,
+  },
+  tabBtn: {
+    flex: 1,
+    paddingVertical: 8,
+    alignItems: 'center',
+    borderRadius: 8,
+  },
+  tabBtnActive: {
+    backgroundColor: '#FFFFFF',
+    shadowColor: '#000',
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    shadowOffset: { width: 0, height: 1 },
+  },
+  tabText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#64748B',
+  },
+  tabTextActive: {
+    color: '#0F172A',
+    fontWeight: '800',
+  },
+  listSection: {
     gap: 12,
   },
-  focusCardTop: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.slate[100],
-    paddingBottom: 12,
-  },
-  periodBadgeRow: {
-    flexDirection: 'row',
+  emptyCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    padding: 24,
     alignItems: 'center',
     gap: 6,
   },
-  periodNumberPill: {
-    backgroundColor: COLORS.slate[900],
-    paddingHorizontal: 7,
-    paddingVertical: 2,
+  emptyTitle: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: '#0F172A',
+    marginTop: 4,
+  },
+  emptySub: {
+    fontSize: 12,
+    color: '#64748B',
+    textAlign: 'center',
+  },
+  subCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    padding: 14,
+    gap: 12,
+  },
+  subCardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingBottom: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
+  },
+  periodPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#EEF2FF',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
     borderRadius: 6,
   },
-  periodNumberText: {
-    fontSize: 10,
-    fontWeight: '800',
-    color: COLORS.white,
-  },
-  periodTimeText: {
+  periodPillText: {
     fontSize: 11,
-    color: COLORS.slate[500],
-  },
-  focusClassName: {
-    fontSize: 18,
     fontWeight: '800',
-    color: COLORS.slate[900],
-    marginTop: 4,
+    color: '#4338CA',
   },
-  focusSubject: {
-    fontSize: 12,
+  timeSlotText: {
+    fontSize: 11,
     fontWeight: '600',
-    color: COLORS.brand[600],
-    marginTop: 1,
+    color: '#64748B',
   },
-  focusRight: {
-    alignItems: 'flex-end',
-  },
-  needsSubPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: COLORS.absentBg,
+  urgentBadge: {
+    backgroundColor: '#FFF1F2',
     paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: COLORS.absentBorder,
-    gap: 5,
+    paddingVertical: 3,
+    borderRadius: 6,
   },
-  subPillDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: COLORS.absent,
-  },
-  needsSubPillText: {
+  urgentBadgeText: {
     fontSize: 10,
     fontWeight: '800',
-    color: COLORS.absentText,
+    color: '#E11D48',
+    textTransform: 'uppercase',
   },
-  absenceReason: {
-    fontSize: 10,
-    color: COLORS.slate[400],
-    marginTop: 4,
-  },
-  matchBox: {
-    backgroundColor: COLORS.brand[50],
-    borderRadius: 16,
-    padding: 12,
-    borderWidth: 1,
-    borderColor: COLORS.brand[100],
-    gap: 10,
-  },
-  matchBoxHeader: {
+  classInfoRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.brand[100],
-    paddingBottom: 8,
+    alignItems: 'flex-start',
   },
-  matchHeaderLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
+  classInfoLeft: {
+    flex: 1,
+    marginRight: 10,
   },
-  matchBoxTitle: {
-    fontSize: 10,
+  gradeTitle: {
+    fontSize: 16,
     fontWeight: '800',
-    color: COLORS.brand[700],
+    color: '#0F172A',
+  },
+  subjectText: {
+    fontSize: 12,
+    color: '#475569',
+    marginTop: 2,
+    fontWeight: '500',
+  },
+  absentFacultyBox: {
+    alignItems: 'flex-end',
+    maxWidth: '50%',
+    flexShrink: 1,
+  },
+  absentLabel: {
+    fontSize: 9.5,
+    fontWeight: '700',
+    color: '#94A3B8',
+    textTransform: 'uppercase',
+  },
+  absentFacultyName: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#0F172A',
+    marginTop: 1,
+    textAlign: 'right',
+  },
+  leaveReasonText: {
+    fontSize: 10,
+    color: '#E11D48',
+    fontWeight: '600',
+    textAlign: 'right',
+  },
+  facultyInfo: {
+    flex: 1,
+    marginRight: 6,
+  },
+  facultyMatchingBox: {
+    backgroundColor: '#F8FAFC',
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    padding: 10,
+    gap: 8,
+  },
+  matchingHeader: {
+    fontSize: 9.5,
+    fontWeight: '800',
+    color: '#64748B',
     letterSpacing: 0.5,
   },
-  availableCount: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: COLORS.brand[600],
-  },
-  recCardHighlighted: {
-    backgroundColor: COLORS.white,
-    borderRadius: 16,
-    padding: 14,
-    borderWidth: 2,
-    borderColor: COLORS.brand[500],
-    position: 'relative',
-    marginTop: 4,
-  },
-  recCardSelected: {
-    borderColor: COLORS.brand[600],
-  },
-  topBadge: {
-    position: 'absolute',
-    top: -10,
-    right: 12,
-    backgroundColor: COLORS.brand[600],
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 8,
-  },
-  topBadgeText: {
-    fontSize: 9,
-    fontWeight: '900',
-    color: COLORS.white,
-  },
-  recCardContent: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 10,
-  },
-  avatarCircleKR: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: COLORS.brand[600],
-    alignItems: 'center',
-    justifyContent: 'center',
-    position: 'relative',
-  },
-  avatarTextKR: {
-    fontSize: 13,
-    fontWeight: '800',
-    color: COLORS.white,
-  },
-  onlineDot: {
-    position: 'absolute',
-    bottom: 0,
-    right: 0,
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: COLORS.present,
-    borderWidth: 1.5,
-    borderColor: COLORS.white,
-  },
-  recDetails: {
-    flex: 1,
-  },
-  recName: {
-    fontSize: 13,
-    fontWeight: '800',
-    color: COLORS.slate[900],
-  },
-  recDept: {
-    fontSize: 11,
-    color: COLORS.slate[500],
-    marginTop: 1,
-  },
-  recTagsRow: {
-    flexDirection: 'row',
-    gap: 6,
-    marginTop: 6,
-  },
-  freePeriodPill: {
-    backgroundColor: COLORS.presentBg,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 6,
-  },
-  freePeriodText: {
-    fontSize: 9,
-    fontWeight: '700',
-    color: COLORS.presentText,
-  },
-  loadPill: {
-    backgroundColor: COLORS.brand[50],
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 6,
-  },
-  loadPillText: {
-    fontSize: 9,
-    fontWeight: '700',
-    color: COLORS.brand[700],
-  },
-  assignButton: {
-    backgroundColor: COLORS.brand[600],
-    borderRadius: 12,
-    height: 38,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 10,
-    gap: 6,
-  },
-  assignButtonText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: COLORS.white,
-  },
-  recCardSecondary: {
-    backgroundColor: COLORS.white,
-    borderRadius: 14,
-    padding: 10,
-    borderWidth: 1,
-    borderColor: COLORS.slate[200],
+  facultyRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    backgroundColor: '#FFFFFF',
+    padding: 8,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
   },
-  recLeft: {
+  facultyMeta: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
+    flex: 1,
   },
-  avatarCircleSR: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    backgroundColor: COLORS.slate[100],
+  facultyAvatar: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    backgroundColor: '#EEF2FF',
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: COLORS.slate[200],
   },
-  avatarTextSR: {
+  facultyAvatarText: {
     fontSize: 11,
     fontWeight: '800',
-    color: COLORS.slate[600],
+    color: '#4338CA',
   },
-  secondaryName: {
+  facultyAvatarMuted: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    backgroundColor: '#F1F5F9',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  facultyAvatarTextMuted: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#64748B',
+  },
+  facultyName: {
     fontSize: 12,
     fontWeight: '700',
-    color: COLORS.slate[800],
+    color: '#0F172A',
   },
-  secondarySub: {
+  facultySub: {
     fontSize: 10,
-    color: COLORS.slate[400],
+    color: '#64748B',
+    marginTop: 1,
   },
-  secondaryAssignButton: {
-    backgroundColor: COLORS.white,
-    borderWidth: 1,
-    borderColor: COLORS.slate[300],
+  assignPrimaryBtn: {
+    backgroundColor: '#4F46E5',
     paddingHorizontal: 12,
     paddingVertical: 6,
-    borderRadius: 8,
+    borderRadius: 6,
   },
-  secondaryAssignText: {
+  assignPrimaryText: {
     fontSize: 11,
     fontWeight: '700',
-    color: COLORS.slate[700],
+    color: '#FFFFFF',
   },
-  coveredSection: {
+  assignSecondaryBtn: {
+    backgroundColor: '#F1F5F9',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 6,
+  },
+  assignSecondaryText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#334155',
+  },
+  coveredCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    padding: 14,
     gap: 10,
   },
   coveredHeader: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  coveredTitleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  coveredTitle: {
-    fontSize: 13,
-    fontWeight: '800',
-    color: COLORS.slate[800],
-  },
-  coveredCountPill: {
-    backgroundColor: COLORS.presentBg,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 8,
-  },
-  coveredCountText: {
-    fontSize: 10,
-    fontWeight: '800',
-    color: COLORS.presentText,
-  },
-  viewLogText: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: COLORS.brand[600],
-  },
-  coveredList: {
-    gap: 8,
-  },
-  coveredItem: {
-    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: COLORS.white,
-    borderRadius: 16,
-    padding: 12,
-    borderWidth: 1,
-    borderColor: COLORS.slate[200],
   },
-  coveredItemLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-  },
-  checkIconBox: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: COLORS.presentBg,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  coveredPeriodRow: {
+  periodPillAllocated: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-  },
-  coveredPeriod: {
-    fontSize: 12,
-    fontWeight: '800',
-    color: COLORS.slate[900],
-  },
-  coveredClass: {
-    fontSize: 11,
-    color: COLORS.slate[500],
-  },
-  coveredTeacher: {
-    fontSize: 11,
-    color: COLORS.slate[600],
-    marginTop: 1,
-  },
-  bold: {
-    fontWeight: '700',
-    color: COLORS.slate[900],
-  },
-  verifiedPill: {
-    backgroundColor: COLORS.presentBg,
+    backgroundColor: '#ECFDF5',
     paddingHorizontal: 8,
     paddingVertical: 3,
-    borderRadius: 8,
+    borderRadius: 6,
   },
-  verifiedPillText: {
+  periodPillAllocatedText: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#059669',
+  },
+  confirmedBadge: {
+    backgroundColor: '#ECFDF5',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+  },
+  confirmedBadgeText: {
     fontSize: 10,
-    fontWeight: '700',
-    color: COLORS.presentText,
+    fontWeight: '800',
+    color: '#059669',
+    textTransform: 'uppercase',
   },
-  bottomSheet: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    backgroundColor: COLORS.white,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    borderTopWidth: 1,
-    borderTopColor: COLORS.slate[200],
-    paddingHorizontal: 16,
-    paddingTop: 8,
-    paddingBottom: 22,
-    gap: 10,
+  coveredBody: {
+    gap: 8,
   },
-  sheetHandle: {
-    width: 36,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: COLORS.slate[300],
-    alignSelf: 'center',
-    marginBottom: 4,
-  },
-  sheetTopRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-  },
-  dispatchStatusRow: {
+  allocationSummaryBox: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 5,
+    backgroundColor: '#F8FAFC',
+    borderRadius: 10,
+    padding: 10,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    marginTop: 4,
   },
-  dispatchBlueDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: COLORS.brand[600],
+  allocCol: {
+    flex: 1,
   },
-  dispatchLabel: {
-    fontSize: 10,
-    fontWeight: '800',
-    color: COLORS.brand[600],
-    letterSpacing: 0.5,
+  allocArrowCol: {
+    paddingHorizontal: 8,
   },
-  sheetTitle: {
-    fontSize: 14,
-    fontWeight: '800',
-    color: COLORS.slate[900],
-    marginTop: 2,
+  allocColLabel: {
+    fontSize: 9.5,
+    fontWeight: '700',
+    color: '#94A3B8',
+    textTransform: 'uppercase',
   },
-  sheetSubtitle: {
-    fontSize: 11,
-    color: COLORS.slate[500],
+  allocColName: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#64748B',
     marginTop: 1,
   },
-  targetClassPill: {
-    width: 34,
-    height: 34,
-    borderRadius: 12,
-    backgroundColor: COLORS.brand[50],
-    borderWidth: 1,
-    borderColor: COLORS.brand[100],
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  targetClassPillText: {
-    fontSize: 12,
-    fontWeight: '900',
-    color: COLORS.brand[700],
-  },
-  closeSheetBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: 10,
-    backgroundColor: COLORS.slate[100],
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  alertNoticeBox: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    backgroundColor: COLORS.slate[50],
-    borderRadius: 12,
-    padding: 8,
-    borderWidth: 1,
-    borderColor: COLORS.slate[200],
-    gap: 6,
-  },
-  alertNoticeText: {
-    fontSize: 10,
-    color: COLORS.slate[600],
-    lineHeight: 14,
-    flex: 1,
-  },
-  sheetActionRow: {
-    flexDirection: 'row',
-    gap: 8,
-    marginTop: 2,
-  },
-  changeButton: {
-    flex: 1,
-    height: 44,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: COLORS.slate[300],
-    backgroundColor: COLORS.white,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  changeButtonText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: COLORS.slate[700],
-  },
-  confirmDispatchButton: {
-    flex: 2,
-    height: 44,
-    borderRadius: 14,
-    backgroundColor: COLORS.brand[600],
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    shadowColor: COLORS.brand[600],
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  confirmDispatchText: {
+  allocColNameAssigned: {
     fontSize: 12,
     fontWeight: '800',
-    color: COLORS.white,
+    color: '#059669',
+    marginTop: 1,
+  },
+  allocColSub: {
+    fontSize: 9.5,
+    color: '#94A3B8',
+    marginTop: 1,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(15, 23, 42, 0.6)',
+    justifyContent: 'flex-end',
+  },
+  modalSheet: {
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    padding: 20,
+    gap: 14,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingBottom: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
+  },
+  modalTitle: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#0F172A',
+  },
+  modalSub: {
+    fontSize: 11,
+    color: '#64748B',
+    marginTop: 1,
+  },
+  closeBtn: {
+    padding: 4,
+  },
+  modalDetailsBox: {
+    backgroundColor: '#F8FAFC',
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    paddingHorizontal: 12,
+  },
+  modalRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingVertical: 9,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
+  },
+  modalLabel: {
+    fontSize: 11.5,
+    color: '#64748B',
+    fontWeight: '600',
+  },
+  modalValue: {
+    fontSize: 11.5,
+    fontWeight: '700',
+    color: '#0F172A',
+  },
+  modalValueBold: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: '#4338CA',
+  },
+  noticeBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: '#ECFDF5',
+    padding: 10,
+    borderRadius: 8,
+  },
+  noticeText: {
+    fontSize: 11,
+    color: '#065F46',
+    flex: 1,
+    fontWeight: '500',
+  },
+  modalActions: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: 4,
+  },
+  modalCancelBtn: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    alignItems: 'center',
+  },
+  modalCancelText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#64748B',
+  },
+  modalConfirmBtn: {
+    flex: 2,
+    paddingVertical: 12,
+    borderRadius: 10,
+    backgroundColor: '#4F46E5',
+    alignItems: 'center',
+  },
+  modalConfirmText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#FFFFFF',
   },
 });

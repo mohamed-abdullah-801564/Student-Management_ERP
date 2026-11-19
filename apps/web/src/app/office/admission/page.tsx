@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import {
   Building2,
@@ -31,9 +32,11 @@ import {
   Printer,
   Download,
   Award,
+  LogOut,
 } from 'lucide-react';
 
 export default function StudentAdmissionRegistryPage() {
+  const router = useRouter();
   // Navigation View: 'wizard' (Stage by stage new admission) | 'registry' (All students) | 'documents' (Verification desk)
   const [activeView, setActiveView] = useState<'wizard' | 'registry' | 'documents'>('wizard');
 
@@ -172,6 +175,17 @@ export default function StudentAdmissionRegistryPage() {
       setCurrentStep((prev) => prev - 1);
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
+  };
+
+  const handleLogout = async () => {
+    try {
+      await supabase.auth.signOut();
+    } catch (err) {
+      console.error('Sign out error:', err);
+    }
+    document.cookie = 'school_erp_session=; path=/; max-age=0';
+    document.cookie = 'school_erp_role=; path=/; max-age=0';
+    router.push('/login');
   };
 
   const handleConfirmAdmission = async (e: React.FormEvent) => {
@@ -345,15 +359,23 @@ export default function StudentAdmissionRegistryPage() {
           </div>
         </div>
 
-        {/* Footer Link to Principal View */}
-        <div className="p-4 border-t border-slate-100">
-          <Link
-            href="/"
-            className="flex items-center justify-center gap-2 w-full py-2.5 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-colors"
+        {/* Office Operator & Sign Out Footer */}
+        <div className="p-4 border-t border-slate-100 bg-slate-50/50 space-y-3">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs font-bold text-slate-900">Admin Office Terminal</p>
+              <p className="text-[10px] text-slate-500">Admissions Counter</p>
+            </div>
+            <span className="w-2 h-2 rounded-full bg-emerald-500" />
+          </div>
+
+          <button
+            onClick={handleLogout}
+            className="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-xl border border-rose-200 bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-bold transition-colors"
           >
-            <span>Executive Principal View</span>
-            <ArrowRight className="w-3.5 h-3.5" />
-          </Link>
+            <LogOut className="w-3.5 h-3.5" />
+            <span>Lock Desk / Sign Out</span>
+          </button>
         </div>
       </aside>
 
@@ -374,16 +396,10 @@ export default function StudentAdmissionRegistryPage() {
           </div>
 
           <div className="flex items-center gap-4">
-            <div className="text-right hidden sm:block">
+            <div className="text-right">
               <p className="text-xs font-bold text-slate-900">142 Enrolled This Term</p>
               <p className="text-[10px] text-emerald-600 font-semibold">● Central Registry Live</p>
             </div>
-            <Link
-              href="/"
-              className="text-xs font-bold text-indigo-600 hover:text-indigo-800 md:hidden"
-            >
-              Principal View →
-            </Link>
           </div>
         </header>
 
